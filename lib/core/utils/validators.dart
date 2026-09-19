@@ -17,4 +17,12 @@ abstract final class Validators {
     if (texto.length < 6) return 'Mínimo 6 caracteres';
     return null;
   }
+
+  /// Valida que [valor] (confirmación) coincida con [campo] (contraseña).
+  static String? confirmarContrasena({required String? campo, required String? valor}) {
+    final String texto = valor ?? '';
+    if (texto.isEmpty) return 'Confirma tu contraseña';
+    if (texto != campo) return 'Las contraseñas no coinciden';
+    return null;
+  }
 }

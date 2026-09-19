@@ -1,8 +1,9 @@
 /// Rol de usuario (dominio en español; valores de Firestore en minúsculas).
 enum RolEnum {
-  persona('persona'),
-  administrativo('administrativo');
+  persona('persona', 'Persona'),
+  administrativo('administrativo', 'Administrativo');
 
-  const RolEnum(this.nombreFirestore);
+  const RolEnum(this.nombreFirestore, this.etiqueta);
   final String nombreFirestore;
+  final String etiqueta;
 }

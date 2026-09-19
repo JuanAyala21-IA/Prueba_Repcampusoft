@@ -6,6 +6,7 @@ import '../../features/admin/presentation/reported_damages_screen.dart';
 import '../../features/auth/domain/rol_enum.dart';
 import '../../features/auth/presentation/about_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
+import '../../features/auth/presentation/complete_profile_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/verify_email_screen.dart';
@@ -29,6 +30,7 @@ abstract final class AppRoutes {
   static const String registro = '/registro';
   static const String recuperar = '/recuperar-password';
   static const String verificarCorreo = '/verificar-correo';
+  static const String completarPerfil = '/completar-perfil';
 
   // Estudiante / Persona.
   static const String inicioEstudiante = '/inicio-estudiante';
@@ -60,6 +62,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.registro, builder: (_, _) => const RegisterScreen()),
       GoRoute(path: AppRoutes.recuperar, builder: (_, _) => const ForgotPasswordScreen()),
       GoRoute(path: AppRoutes.verificarCorreo, builder: (_, _) => const VerifyEmailScreen()),
+      GoRoute(path: AppRoutes.completarPerfil, builder: (_, _) => const CompleteProfileScreen()),
       GoRoute(path: AppRoutes.inicioEstudiante, builder: (_, _) => const StudentHomeScreen()),
       GoRoute(path: AppRoutes.inicioAdmin, builder: (_, _) => const AdminHomeScreen()),
       GoRoute(path: AppRoutes.perfilEstudiante, builder: (_, _) => const StudentProfileScreen()),
@@ -82,7 +85,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// Gate de navegación del §5.3: sesión → correo verificado → rol.
+/// Gate de navegación del §5.3: sesión → correo verificado → perfil → rol.
 String? _redirigir(Ref ref, GoRouterState estado) {
   final Sesion sesion = ref.read(sesionProvider);
   final String ruta =
@@ -95,43 +98,39 @@ String? _redirigir(Ref ref, GoRouterState estado) {
     AppRoutes.recuperar,
   };
 
-  // Sin sesión.
-  if (!sesion.autenticado) {
-    if (sesion.estado == SesionEstado.correoPendiente) {
+  switch (sesion.estado) {
+    case SesionEstado.sinSesion:
+      return rutasPublicas.contains(ruta) ? null : AppRoutes.login;
+
+    case SesionEstado.correoPendiente:
       return ruta == AppRoutes.verificarCorreo ? null : AppRoutes.verificarCorreo;
-    }
-    return rutasPublicas.contains(ruta) ? null : AppRoutes.login;
-  }
 
-  // Autenticado pero correo sin verificar.
-  if (!sesion.correoVerificado) {
-    return ruta == AppRoutes.verificarCorreo ? null : AppRoutes.verificarCorreo;
-  }
+    case SesionEstado.rolPendiente:
+      return ruta == AppRoutes.completarPerfil ? null : AppRoutes.completarPerfil;
 
-  const Set<String> rutasPersona = {
-    AppRoutes.inicioEstudiante,
-    AppRoutes.perfilEstudiante,
-    AppRoutes.reportarDanos,
-    AppRoutes.misReportes,
-    AppRoutes.detalleReporte,
-    AppRoutes.notificacionesEstudiante,
-    AppRoutes.editarPerfil,
-  };
-
-  const Set<String> rutasAdministrativo = {
-    AppRoutes.inicioAdmin,
-    AppRoutes.perfilAdmin,
-    AppRoutes.danosReportados,
-    AppRoutes.gestionReporte,
-    AppRoutes.notificacionesAdmin,
-    AppRoutes.editarPerfil,
-  };
-
-  if (sesion.rol == RolEnum.persona) {
-    return rutasPersona.contains(ruta) ? null : AppRoutes.inicioEstudiante;
+    case SesionEstado.rolAplicado:
+      final bool esAdmin = sesion.rol == RolEnum.administrativo;
+      final Set<String> permitidas = esAdmin ? rutasAdministrativo : rutasPersona;
+      if (permitidas.contains(ruta)) return null;
+      return esAdmin ? AppRoutes.inicioAdmin : AppRoutes.inicioEstudiante;
   }
-  if (sesion.rol == RolEnum.administrativo) {
-    return rutasAdministrativo.contains(ruta) ? null : AppRoutes.inicioAdmin;
-  }
-  return AppRoutes.login;
 }
+
+const Set<String> rutasPersona = {
+  AppRoutes.inicioEstudiante,
+  AppRoutes.perfilEstudiante,
+  AppRoutes.reportarDanos,
+  AppRoutes.misReportes,
+  AppRoutes.detalleReporte,
+  AppRoutes.notificacionesEstudiante,
+  AppRoutes.editarPerfil,
+};
+
+const Set<String> rutasAdministrativo = {
+  AppRoutes.inicioAdmin,
+  AppRoutes.perfilAdmin,
+  AppRoutes.danosReportados,
+  AppRoutes.gestionReporte,
+  AppRoutes.notificacionesAdmin,
+  AppRoutes.editarPerfil,
+};

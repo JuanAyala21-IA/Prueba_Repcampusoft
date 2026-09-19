@@ -1,0 +1,202 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============ HELPERS ============
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function userDoc(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function reportDoc(reportId) {
+      return /databases/$(database)/documents/reports/$(reportId);
+    }
+
+    function notifDoc(notifId) {
+      return /databases/$(database)/documents/notifications/$(notifId);
+    }
+
+    function eventToEstado(evento) {
+      return (evento == 'creado'      ? 'Pendiente' :
+              evento == 'en_revision' ? 'En revision' :
+              evento == 'en_proceso'  ? 'En proceso' :
+              evento == 'solucionado' ? 'Solucionado' :
+              evento == 'rechazado'   ? 'Rechazado' : null);
+    }
+
+    function canReadNotif(notifId) {
+      return get(notifDoc(notifId)).data.uidDestino == request.auth.uid
+          || (isAdministrativo()
+              && get(notifDoc(notifId)).data.destinoRol == 'administrativo');
+    }
+
+    function isRol(rol) {
+      return isAuthenticated()
+        && exists(userDoc(request.auth.uid))
+        && get(userDoc(request.auth.uid)).data.rol == rol;
+    }
+
+    function isPersona()        { return isRol('persona'); }
+    function isAdministrativo() { return isRol('administrativo'); }
+
+    function isAllowedStateTransition(current, next) {
+      return (current == 'Pendiente' && (next == 'En revision' || next == 'Rechazado'))
+          || (current == 'En revision' && (next == 'En proceso' || next == 'Rechazado'))
+          || (current == 'En proceso' && (next == 'Solucionado' || next == 'Rechazado'));
+    }
+
+    // ============ CATÁLOGOS (si se materializan en Firestore) ============
+    match /catalogos/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // ============ LISTA BLANCA DE ADMINISTRATIVOS ============
+    match /admins_permitidos/{correo} {
+      allow read, write: if false;
+    }
+
+    // ============ USUARIOS ============
+    match /users/{uid} {
+      allow create: if isAuthenticated()
+        && request.auth.uid == uid
+        && request.auth.token.email_verified == true
+        && request.resource.data.correo == request.auth.token.email
+        && (
+             (exists(/databases/$(database)/documents/admins_permitidos/$(request.resource.data.correo))
+               && request.resource.data.rol == 'administrativo')
+          || (!exists(/databases/$(database)/documents/admins_permitidos/$(request.resource.data.correo))
+               && request.resource.data.rol == 'persona')
+        );
+
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+
+      allow update: if isAuthenticated()
+        && request.auth.uid == uid
+        && request.resource.data.rol == resource.data.rol
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['nombre', 'telefono', 'fcmToken']);
+
+      allow delete: if false;
+
+      match /notificacionesLeidas/{notifId} {
+        allow read: if request.auth.uid == uid
+          && exists(notifDoc(notifId))
+          && canReadNotif(notifId);
+
+        allow create: if request.auth.uid == uid
+          && exists(notifDoc(notifId))
+          && canReadNotif(notifId)
+          && request.resource.data.leida == true
+          && request.resource.data.keys().hasOnly(['leida', 'leidaEn']);
+
+        allow update: if request.auth.uid == uid
+          && exists(notifDoc(notifId))
+          && canReadNotif(notifId)
+          && request.resource.data.leida == true
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['leida', 'leidaEn']);
+
+        allow delete: if false;
+      }
+    }
+
+    // ============ REPORTES ============
+    match /reports/{reportId} {
+      allow read: if isPersona() && resource.data.uid == request.auth.uid
+                 || isAdministrativo();
+
+      allow create: if isPersona()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.correoAutor == request.auth.token.email
+        && request.resource.data.estado == 'Pendiente';
+
+      allow update: if isAdministrativo()
+        && isAllowedStateTransition(resource.data.estado, request.resource.data.estado)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['estado', 'observacionAdmin', 'actualizadoEn']);
+
+      allow delete: if false;
+
+      match /historial/{historialId} {
+        allow read: if isAdministrativo()
+                   || (isPersona()
+                       && get(reportDoc(reportId)).data.uid == request.auth.uid);
+
+        allow create: if (isAdministrativo()
+                          && request.resource.data.estadoNuevo != request.resource.data.estadoAnterior
+                          && get(reportDoc(reportId)).data.estado == request.resource.data.estadoAnterior
+                          && getAfter(reportDoc(reportId)).data.estado == request.resource.data.estadoNuevo
+                          && historialId == reportId + '_' + request.resource.data.estadoNuevo)
+                     || (isPersona()
+                          && request.resource.data.estadoAnterior == 'Pendiente'
+                          && request.resource.data.estadoNuevo == 'Pendiente'
+                          && historialId == reportId + '_inicial'
+                          && !exists(reportDoc(reportId))
+                          && getAfter(reportDoc(reportId)).data.uid == request.auth.uid);
+
+        allow update, delete: if false;
+      }
+
+      match /media/{mediaId} {
+        allow read: if isPersona()
+                     && get(reportDoc(reportId)).data.uid == request.auth.uid
+                   || isAdministrativo();
+
+        allow create: if isPersona()
+          && mediaId == 'foto'
+          && get(reportDoc(reportId)).data.uid == request.auth.uid;
+
+        allow update, delete: if false;
+      }
+    }
+
+    // ============ NOTIFICACIONES ============
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated()
+        && (resource.data.uidDestino == request.auth.uid
+            || (isAdministrativo() && resource.data.destinoRol == 'administrativo'));
+
+      allow create: if isAuthenticated()
+        && ((request.resource.data.uidDestino != null ? 1 : 0)
+            + (request.resource.data.destinoRol != null ? 1 : 0) == 1)
+        && request.resource.data.keys().hasOnly(
+             ['tipo', 'titulo', 'mensaje', 'reportId', 'evento', 'estadoNuevo',
+              'uidDestino', 'destinoRol', 'autorUid', 'creadoEn'])
+        && request.resource.data.tipo in ['reporte', 'administrativo', 'sistema']
+        && (
+             (isPersona()
+               && request.resource.data.destinoRol == 'administrativo'
+               && request.resource.data.evento == 'creado'
+               && notifId == request.resource.data.reportId + '_' + request.resource.data.evento
+               && request.resource.data.tipo == 'reporte'
+               && request.resource.data.autorUid == request.auth.uid
+               && request.resource.data.uidDestino == null
+               && !exists(reportDoc(request.resource.data.reportId))
+               && getAfter(reportDoc(request.resource.data.reportId)).data.uid == request.auth.uid
+               && getAfter(reportDoc(request.resource.data.reportId)).data.estado
+                  == eventToEstado(request.resource.data.evento))
+          || (isAdministrativo()
+               && request.resource.data.destinoRol == null
+               && request.resource.data.evento in ['en_revision', 'en_proceso', 'solucionado', 'rechazado']
+               && notifId == request.resource.data.reportId + '_' + request.resource.data.evento
+               && request.resource.data.tipo == 'reporte'
+               && request.resource.data.autorUid == request.auth.uid
+               && request.resource.data.uidDestino == get(reportDoc(request.resource.data.reportId)).data.uid
+               && get(reportDoc(request.resource.data.reportId)).data.estado
+                  != getAfter(reportDoc(request.resource.data.reportId)).data.estado
+               && getAfter(reportDoc(request.resource.data.reportId)).data.estado
+                  == eventToEstado(request.resource.data.evento))
+          || (isAdministrativo()
+               && request.resource.data.destinoRol == 'administrativo'
+               && request.resource.data.reportId == null
+               && request.resource.data.evento == null)
+        );
+
+      allow update, delete: if false;
+    }
+  }
+}

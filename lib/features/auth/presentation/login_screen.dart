@@ -6,13 +6,14 @@ import '../../../core/routes/app_router.dart';
 import '../../../core/routes/session_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/circular_button_uts.dart';
 import '../../../shared/widgets/fields.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/uts_logo.dart';
-import '../../auth/domain/rol_enum.dart';
 
-/// Pantalla 1: Iniciar Sesión.
+/// Pantalla 1: Iniciar Sesión (RF-01, HU-01). El rol se resuelve desde
+/// `users/{uid}` según el gate §5.3, no por modo seleccionado.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -21,17 +22,31 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _correo = TextEditingController();
   final _clave = TextEditingController();
-  RolEnum? _modo;
+  bool _enviando = false;
 
-  void _iniciarSesion() {
-    final RolEnum rol = _modo ?? RolEnum.persona;
-    ref.read(sesionProvider.notifier).simularLogin(rol);
+  Future<void> _iniciarSesion() async {
+    FocusScope.of(context).unfocus();
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _enviando = true);
+    final String? error = await ref
+        .read(sesionProvider.notifier)
+        .iniciarSesion(correo: _correo.text, contrasena: _clave.text);
+    if (!mounted) return;
+    setState(() => _enviando = false);
+    if (error != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error)));
+    }
   }
 
-  void _seleccionarModo(RolEnum rol) {
-    setState(() => _modo = rol);
+  @override
+  void dispose() {
+    _correo.dispose();
+    _clave.dispose();
+    super.dispose();
   }
 
   @override
@@ -72,57 +87,49 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ],
                     ),
-                    child: Column(
-                      children: [
-                        const UserAvatarInline(),
-                        const SizedBox(height: 12),
-                        Text('Ingresa tus credenciales',
-                            style: AppTypography.textTheme.titleSmall),
-                        const SizedBox(height: 18),
-                        PillField(
-                          hint: 'Correo institucional',
-                          icono: Icons.mail_outline,
-                          controlador: _correo,
-                          textInputAction: TextInputAction.next,
-                        ),
-                        const SizedBox(height: 14),
-                        PillField(
-                          hint: 'Contraseña',
-                          icono: Icons.lock_outline,
-                          esContrasena: true,
-                          controlador: _clave,
-                        ),
-                        const SizedBox(height: 20),
-                        PrimaryButton(
-                          texto: 'Iniciar sesión',
-                          onPressed: _iniciarSesion,
-                        ),
-                        const SizedBox(height: 12),
-                        TextButton(
-                          onPressed: () => _seleccionarModo(RolEnum.administrativo),
-                          child: Text(
-                            _modo == RolEnum.administrativo
-                                ? 'Modo: Administrativo (seleccionado)'
-                                : 'Ingresar como Administrativo',
+                    child: Form(
+                      key: _formKey,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      child: Column(
+                        children: [
+                          const UserAvatarInline(),
+                          const SizedBox(height: 12),
+                          Text('Ingresa tus credenciales',
+                              style: AppTypography.textTheme.titleSmall),
+                          const SizedBox(height: 18),
+                          PillField(
+                            hint: 'Correo institucional',
+                            icono: Icons.mail_outline,
+                            controlador: _correo,
+                            textInputAction: TextInputAction.next,
+                            validator: Validators.correo,
                           ),
-                        ),
-                        TextButton(
-                          onPressed: () => _seleccionarModo(RolEnum.persona),
-                          child: Text(
-                            _modo == RolEnum.persona
-                                ? 'Modo: Persona (seleccionado)'
-                                : 'Ingresar como persona',
+                          const SizedBox(height: 14),
+                          PillField(
+                            hint: 'Contraseña',
+                            icono: Icons.lock_outline,
+                            esContrasena: true,
+                            controlador: _clave,
+                            textInputAction: TextInputAction.done,
+                            validator: Validators.contrasena,
+                            onFieldSubmitted: (_) => _enviando ? null : _iniciarSesion(),
                           ),
-                        ),
-                        TextButton(
-                          onPressed: () => context.go(AppRoutes.registro),
-                          child: const Text('¿No tienes una cuenta? Registrate'),
-                        ),
-                        TextButton(
-                          onPressed: () => context.go(AppRoutes.recuperar),
-                          child: const Text('¿Olvidaste tu contraseña?'),
-                        ),
-                      ],
+                          const SizedBox(height: 20),
+                          PrimaryButton(
+                            texto: _enviando ? 'Ingresando…' : 'Iniciar sesión',
+                            onPressed: _enviando ? null : _iniciarSesion,
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: () => context.go(AppRoutes.registro),
+                            child: const Text('¿No tienes una cuenta? Registrate'),
+                          ),
+                          TextButton(
+                            onPressed: () => context.go(AppRoutes.recuperar),
+                            child: const Text('¿Olvidaste tu contraseña?'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),

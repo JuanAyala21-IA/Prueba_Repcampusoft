@@ -3,6 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../domain/rol_enum.dart';
 
+/// Texto del aviso cuando el correo ya fue verificado. Si el rol efectivo
+/// difiere del intentado (reglas Firestore), se informa quién está autorizado.
+String avisoRolAsignado({RolEnum? intentado, required RolEnum asignado}) {
+  if (intentado == null || intentado == asignado) {
+    return 'Tu rol asignado es: ${asignado.etiqueta}.';
+  }
+  return 'No tienes autorización para ${intentado.etiqueta}. Tu rol asignado es: ${asignado.etiqueta}.';
+}
+
 /// Avatar circular negro con silueta de usuario (pantallas 1, 3, 4, 5, 6, 7.png).
 class UserAvatar extends StatelessWidget {
   const UserAvatar({super.key, required this.tamano});
