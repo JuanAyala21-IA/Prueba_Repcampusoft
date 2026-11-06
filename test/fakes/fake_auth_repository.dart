@@ -9,7 +9,13 @@ import 'package:repcampusoft/features/auth/domain/rol_enum.dart';
 import 'package:repcampusoft/features/auth/domain/usuario.dart';
 
 class FakeAuthUsuario implements AuthUsuario {
-  FakeAuthUsuario({required this.uid, required this.email, this.emailVerified = false});
+  FakeAuthUsuario({
+    required this.uid,
+    required this.email,
+    this.emailVerified = false,
+    this.displayName,
+    this.autenticadoConGoogle = false,
+  });
 
   @override
   final String uid;
@@ -21,6 +27,15 @@ class FakeAuthUsuario implements AuthUsuario {
   bool emailVerified;
 
   @override
+  final String? displayName;
+
+  @override
+  final bool autenticadoConGoogle;
+
+  @override
+  bool get correoConfiable => emailVerified || autenticadoConGoogle;
+
+  @override
   Future<void> reload() async {}
 
   @override
@@ -28,7 +43,8 @@ class FakeAuthUsuario implements AuthUsuario {
 }
 
 /// Repositorio en memoria que emula las reglas de Firestore del §4:
-/// rol administrativo solo si el correo está en [whitelist].
+/// el autorregistro solo crea `persona`; un correo en [whitelist]
+/// (`super_admins_permitidos`) se crea como `superadministrador`.
 class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({this.whitelist = const <String>{}});
 
@@ -36,9 +52,22 @@ class FakeAuthRepository implements AuthRepository {
   final Set<String> correosRegistrados = <String>{};
   final Map<String, bool> verificadoPorCorreo = <String, bool>{};
   final Map<String, Usuario> perfiles = <String, Usuario>{};
-  final StreamController<AuthUsuario?> _stream = StreamController<AuthUsuario?>.broadcast();
+
+  /// Contraseñas creadas en la pantalla "Completa tu registro" (Google).
+  final Map<String, String> contrasenas = <String, String>{};
+
+  /// `true` si al asignar la contraseña el perfil ya existía (el orden importa:
+  /// vincular la contraseña marca el correo como no verificado en Firebase).
+  bool perfilExistiaAlAsignarContrasena = false;
+  final StreamController<AuthUsuario?> _stream =
+      StreamController<AuthUsuario?>.broadcast();
   AuthUsuario? _actual;
   bool enviadoCorreoVerificacion = false;
+
+  /// Correo que devuelve la cuenta Google simulada. `null` simula que el
+  /// usuario canceló el flujo.
+  String? correoGoogle = 'estudiante@gmail.com';
+  String nombreGoogle = 'Estudiante UTS';
 
   @override
   Stream<AuthUsuario?> authStateChanges() => _stream.stream;
@@ -58,7 +87,10 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> crearCuenta({required String correo, required String contrasena}) async {
+  Future<void> crearCuenta({
+    required String correo,
+    required String contrasena,
+  }) async {
     final String key = correo.trim().toLowerCase();
     if (correosRegistrados.contains(key)) {
       throw FirebaseAuthException(code: 'email-already-in-use');
@@ -69,7 +101,10 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> iniciarSesion({required String correo, required String contrasena}) async {
+  Future<void> iniciarSesion({
+    required String correo,
+    required String contrasena,
+  }) async {
     final String key = correo.trim().toLowerCase();
     if (verificadoPorCorreo[key] == null) {
       throw FirebaseAuthException(code: 'user-not-found');
@@ -80,6 +115,32 @@ class FakeAuthRepository implements AuthRepository {
       emailVerified: verificadoPorCorreo[key]!,
     );
     _emitir();
+  }
+
+  @override
+  Future<void> iniciarSesionConGoogle() async {
+    final String? correo = correoGoogle;
+    if (correo == null) {
+      throw FirebaseAuthException(code: 'web-context-canceled');
+    }
+    final String key = correo.trim().toLowerCase();
+    _actual = FakeAuthUsuario(
+      uid: 'uid-google-$key',
+      email: key,
+      displayName: nombreGoogle,
+      autenticadoConGoogle: true,
+    );
+    _emitir();
+  }
+
+  @override
+  Future<void> establecerContrasena({required String contrasena}) async {
+    final AuthUsuario? actual = _actual;
+    if (actual == null) {
+      throw FirebaseAuthException(code: 'user-not-found');
+    }
+    contrasenas[actual.uid] = contrasena;
+    perfilExistiaAlAsignarContrasena = perfiles.containsKey(actual.uid);
   }
 
   @override
@@ -94,33 +155,62 @@ class FakeAuthRepository implements AuthRepository {
   Future<Usuario?> obtenerPerfil(String uid) async => perfiles[uid];
 
   @override
-  Future<Result<RolEnum>> crearPerfil(Usuario perfil, {required RolEnum rolIntentado}) async {
-    final bool autorizado = whitelist.contains(perfil.correo.trim().toLowerCase());
-    const List<RolEnum> orden = [RolEnum.persona, RolEnum.administrativo];
-    final List<RolEnum> intentos = [
-      rolIntentado,
-      ...orden.where((rol) => rol != rolIntentado),
-    ];
-    final Set<RolEnum> vistos = <RolEnum>{};
-    for (final RolEnum rol in intentos) {
-      if (!vistos.add(rol)) continue;
-      final bool ok = autorizado ? rol == RolEnum.administrativo : rol == RolEnum.persona;
-      if (!ok) continue;
-      perfiles[perfil.uid] = Usuario(
-        uid: perfil.uid,
-        nombre: perfil.nombre,
-        correo: perfil.correo,
-        rol: rol,
-        cargo: perfil.cargo,
-      );
-      return Success(rol);
-    }
-    return const Failure('Rol no autorizado');
+  Future<Result<RolEnum>> crearPerfil(Usuario perfil) async {
+    final bool esSuperadministrador = whitelist.contains(
+      perfil.correo.trim().toLowerCase(),
+    );
+    final RolEnum rol = esSuperadministrador
+        ? RolEnum.superadministrador
+        : RolEnum.persona;
+    perfiles[perfil.uid] = Usuario(
+      uid: perfil.uid,
+      nombre: perfil.nombre,
+      correo: perfil.correo,
+      rol: rol,
+      cargo: perfil.cargo,
+    );
+    return Success(rol);
   }
 
   @override
   Future<void> cerrarSesion() async {
     _actual = null;
     _emitir();
+  }
+
+  @override
+  Future<void> actualizarPerfil({
+    required String uid,
+    required String nombre,
+    String? telefono,
+    String? cargo,
+    String? dependencia,
+  }) async {
+    final Usuario? perfil = perfiles[uid];
+    if (perfil != null) {
+      perfiles[uid] = Usuario(
+        uid: perfil.uid,
+        nombre: nombre,
+        correo: perfil.correo,
+        rol: perfil.rol,
+        cargo: cargo,
+        dependencia: dependencia,
+        telefono: telefono,
+      );
+    }
+  }
+
+  @override
+  Future<void> cambiarContrasena({
+    required String uid,
+    required String contrasenaActual,
+    required String contrasenaNueva,
+  }) async {
+    // En el fake, solo verificamos que la contraseña actual coincida con la almacenada
+    // Como no almacenamos contraseñas en el fake, permitimos cualquier cambio
+    // siempre que la contraseña nueva no esté vacía
+    if (contrasenaNueva.isEmpty) {
+      throw FirebaseAuthException(code: 'weak-password');
+    }
   }
 }

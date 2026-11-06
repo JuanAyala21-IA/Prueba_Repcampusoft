@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Repcampusoft</string>
+	<string>REPCAMPUSOFT</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -22,10 +22,37 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<!-- Cliente iOS de Google Sign-In y su esquema invertido para recibir el
+	     callback nativo (ver docs/configuracion_google.md). -->
+	<key>GIDClientID</key>
+	<string>895201556108-io1s78v7a4vilr9478kp3advms7g588c.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>app-1-895201556108-ios-df51473b18a0b84da4eda9</string>
+				<string>com.googleusercontent.apps.895201556108-io1s78v7a4vilr9478kp3advms7g588c</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- Permisos de iOS para adjuntar la evidencia fotográfica (image_picker).
+	     Sin estas claves iOS termina la app al abrir cámara o galería. -->
+	<key>NSCameraUsageDescription</key>
+	<string>REPCAMPUSOFT usa la cámara para tomar la foto de evidencia del daño reportado.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>REPCAMPUSOFT accede a tus fotos para adjuntar la evidencia del daño reportado.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Permite a FCM entregar notificaciones con la app en segundo plano. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

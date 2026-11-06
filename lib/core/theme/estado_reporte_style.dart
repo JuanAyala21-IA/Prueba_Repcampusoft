@@ -2,55 +2,96 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// Estados de un reporte (nombres en español, según dominio de arquitectura §2.4).
+/// Estados de un reporte (RF-11/RF-15 §2.6 de requisitos.md).
+///
+/// ## Canonicidad Firestore (§2.4 / firestore.rules)
+/// En Firestore (`reports/{id}.estado`), el historial `_inicial` y la
+/// notificación `_creado` se persisten los 5 estados con **identificador
+/// ASCII sin acentos**: `'Pendiente'`, `'En revision'`, `'En proceso'`,
+/// `'Solucionado'`, `'Rechazado'`. Las reglas `create` (§2.4) validan
+/// `estado=='Pendiente'` y la transición admin `isAllowedStateTransition` usa
+/// esos mismos ASCII (§2.6/Fase 6).
+///
+/// `valorFirestore` es el identificador canónico ASCII (se escribe en
+/// Firestore y se lee con `fromValor`). `nombre` es la etiqueta de UI (con
+/// tilde donde corresponde, p. ej. "En revisión").
 enum EstadoReporte {
-  pendiente(
-    nombre: 'Pendiente',
-    color: AppColors.estadoPendiente,
-    icono: Icons.access_time_rounded,
-  ),
-  enRevision(
-    nombre: 'En revisión',
-    color: AppColors.estadoEnRevision,
-    icono: Icons.search_rounded,
-  ),
-  enProceso(
-    nombre: 'En proceso',
-    color: AppColors.estadoEnProceso,
-    icono: Icons.build_rounded,
-  ),
+  pendiente(color: AppColors.estadoPendiente, icono: Icons.access_time_rounded),
+  enRevision(color: AppColors.estadoEnRevision, icono: Icons.search_rounded),
+  enProceso(color: AppColors.estadoEnProceso, icono: Icons.build_rounded),
   solucionado(
-    nombre: 'Solucionado',
     color: AppColors.estadoSolucionado,
     icono: Icons.check_circle_rounded,
   ),
-  rechazado(
-    nombre: 'Rechazado',
-    color: AppColors.estadoRechazado,
-    icono: Icons.cancel_rounded,
-  );
+  rechazado(color: AppColors.estadoRechazado, icono: Icons.cancel_rounded);
 
-  const EstadoReporte({
-    required this.nombre,
-    required this.color,
-    required this.icono,
-  });
+  const EstadoReporte({required this.color, required this.icono});
 
-  final String nombre;
   final Color color;
   final IconData icono;
 
-  /// Valor almacenado en Firestore (`estado` de la colección `reports`).
-  String get valorFirestore => nombre;
+  /// Identificador canónico ASCII almacenado en Firestore (`estado` de
+  /// `reports`, historial y notificación; §2.4/§6.2). SIN acentos, porque
+  /// `firestore.rules` comparan estos literales exactos.
+  String get valorFirestore => switch (this) {
+    EstadoReporte.pendiente => 'Pendiente',
+    EstadoReporte.enRevision => 'En revision',
+    EstadoReporte.enProceso => 'En proceso',
+    EstadoReporte.solucionado => 'Solucionado',
+    EstadoReporte.rechazado => 'Rechazado',
+  };
 
-  /// Texto de contraste legible sobre el color del estado.
-  Color get colorTexto => color.computeLuminance() > 0.45 ? AppColors.textPrimary : Colors.white;
+  /// Etiqueta de UI con acentos (contraste: "En revisión", "En proceso", ...).
+  String get nombre => switch (this) {
+    EstadoReporte.pendiente => 'Pendiente',
+    EstadoReporte.enRevision => 'En revisión',
+    EstadoReporte.enProceso => 'En proceso',
+    EstadoReporte.solucionado => 'Solucionado',
+    EstadoReporte.rechazado => 'Rechazado',
+  };
 
-  /// Convierte el valor de Firestore a [EstadoReporte].
+  /// Color de texto legible sobre el color del estado.
+  Color get colorTexto =>
+      color.computeLuminance() > 0.45 ? AppColors.textPrimary : Colors.white;
+
+  /// Convierte el valor canónico de Firestore a [EstadoReporte].
+  ///
+  /// Acepta tanto el identificador ASCII (`'En revision'`) como la etiqueta de
+  /// UI con tilde (`'En revisión'`), sin distinguir mayúsculas. Si el valor no
+  /// corresponde a ningún estado, cae en [EstadoReporte.pendiente].
   static EstadoReporte fromValor(String valor) {
-    return EstadoReporte.values.firstWhere(
-      (estado) => estado.nombre == valor,
-      orElse: () => EstadoReporte.pendiente,
-    );
+    final String buscado = _sinAcentos(valor).toLowerCase();
+    for (final EstadoReporte estado in EstadoReporte.values) {
+      if (estado.valorFirestore == valor ||
+          estado.nombre == valor ||
+          estado.valorFirestore.toLowerCase() == buscado ||
+          _sinAcentos(estado.nombre).toLowerCase() == buscado) {
+        return estado;
+      }
+    }
+    return EstadoReporte.pendiente;
+  }
+
+  /// Quita las tildes/diéresis para comparar valores escritos con o sin acento.
+  static String _sinAcentos(String valor) {
+    const Map<String, String> reemplazos = <String, String>{
+      'á': 'a',
+      'é': 'e',
+      'í': 'i',
+      'ó': 'o',
+      'ú': 'u',
+      'ü': 'u',
+      'Á': 'A',
+      'É': 'E',
+      'Í': 'I',
+      'Ó': 'O',
+      'Ú': 'U',
+      'Ü': 'U',
+    };
+    String resultado = valor.trim();
+    reemplazos.forEach((String conAcento, String sinAcento) {
+      resultado = resultado.replaceAll(conAcento, sinAcento);
+    });
+    return resultado;
   }
 }

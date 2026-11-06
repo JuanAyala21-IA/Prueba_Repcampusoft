@@ -1,4 +1,4 @@
-# Arquitectura de Software - REPCAMPUSOFT (Fase 2: Diseño)
+﻿# Arquitectura de Software - REPCAMPUSOFT (Fase 2: Diseño)
 
 Documento técnico que define la arquitectura del sistema, el modelo de datos, las reglas de seguridad, los flujos de autenticación, la navegación y las dependencias del proyecto.
 
@@ -101,7 +101,7 @@ admins_permitidos/{correo}     # ID del documento = correo institucional EN MIN�
 
 Escritura **solo manual** (consola/script) — la app nunca escribe aquí (regla `allow write: if false`) ni necesita leerla: la verificación de pertenencia la hace el servidor con `exists(...)` dentro de las reglas.
 
-> **Normalización en minúsculas (crítico)**: el lenguaje de `firestore.rules` no tiene función `lower()`. La seguridad se apoya en que **Firebase Auth normaliza automáticamente el correo a minúsculas** al crear la cuenta, por lo que `request.auth.token.email` llega siempre en minúsculas. Por eso `admins_permitidos` debe almacenar los IDs **siempre en minúsculas**, garantizando igualdad exacta con `exists(...)`. No se usan puntos ni mayúsculas como ID.
+> **Normalización en minúsculas (crítico)**: Firebase Auth normaliza automáticamente el correo a minúsculas al crear la cuenta, por lo que `request.auth.token.email` llega normalmente en minúsculas. Por eso `admins_permitidos` debe almacenar los IDs **siempre en minúsculas**, garantizando igualdad exacta con `exists(...)`. No se usan puntos ni mayúsculas como ID.
 
 ### 2.3. `reports/{id}` — Reporte de daño
 
@@ -110,17 +110,23 @@ reports/{id}
 ├── uid:             string          # Autor (auth.uid)
 ├── correoAutor:     string          # Copia de seguridad para el perfil del admin (pantalla de gestión)
 ├── nombreAutor:     string          # Nombre visible del autor (RNF-06: solo lo esencial para el admin)
-├── tipoDano:        string          # Categoría del catálogo (ej: "Mobiliario")
+├── tipoUbicacion:   string          # aula | laboratorio | sala_computo | bano | pasillo | oficina | auditorio | biblioteca | cafeteria | escaleras | ascensor | zona_exterior | parqueadero | otro
+├── tipoDano:        string          # Categoría del catálogo filtrado por el tipo de espacio
 ├── descripcion:     string
-├── edificio:        string          # "Edificio A" | "Edificio B"...
-├── piso:            string          # "4"
-├── salon:           string          # "402 A"
+├── edificio:        string (opc.)   # "Edificio A" | "Edificio B"... (solo espacios interiores)
+├── piso:            string (opc.)   # "Piso 4", tramo de escaleras o piso/cabina del ascensor
+├── espacio:         string          # Texto humano: "Salón 402 A", "Baño de mujeres", "Jardines"
+├── referencia:      string (opc.)   # Detalle adicional; obligatoria en zona_exterior
+├── ubicacionTexto:  string          # "Edificio A · Piso 4 · Salón 402 A" (listas, detalle, notificaciones)
+├── salon:           string (legado) # Solo en reportes antiguos; no se escribe en creaciones nuevas
 ├── tieneFoto:       bool                # true si existe reports/{id}/media/foto (la lista NO descarga la imagen)
 ├── estado:          string          # Pendiente | En revision | En proceso | Solucionado | Rechazado
 ├── observacionAdmin:string (opcional)  # Nota del administrativo (RF-15)
 ├── creadoEn:        timestamp
 └── actualizadoEn:   timestamp
 ```
+
+`ubicacionTexto` se construye en el dominio con `construirUbicacionTexto(...)` y evita que cada pantalla recomponga la ubicación. Los espacios interiores incluyen edificio y piso; las zonas exteriores, parqueaderos y "otro" incluyen la referencia en el texto. El detalle del contrato y la compatibilidad con `salon` están en `docs/ubicaciones_reportes.md`.
 
 ### 2.4. `reports/{id}/historial/{id}` — Historial de transiciones (subcolección)
 
@@ -224,7 +230,7 @@ users/{uid}/notificacionesLeidas/{notifId}
 
 > El **badge de no leídas** ya no filtra por `leida` (campo eliminado del documento): se resuelve en cliente intersectando las notificaciones visibles (índices 5/7) con los IDs de `users/{uid}/notificacionesLeidas`, por lo que **no se requiere índice adicional**.
 
-> La **búsqueda por texto** de la pantalla 12 (`CA-05.1`) no es una consulta nativa de Firestore. Se resuelve cargando la lista completa de reportes que ve el admin y filtrando **en memoria** por `tipoDano`, `descripcion` y `salon`. Para volúmenes de un campus universitario es suficiente; si crece, se escala con un buscador externo (Algolia/Meilisearch) o campos normalizados (fuera de alcance).
+> La **búsqueda por texto** de la pantalla 12 (`CA-05.1`) no es una consulta nativa de Firestore. Se resuelve cargando la lista completa de reportes que ve el admin y filtrando **en memoria** por `tipoDano`, `descripcion`, `correoAutor` y `ubicacionTexto`. Para volúmenes de un campus universitario es suficiente; si crece, se escala con un buscador externo (Algolia/Meilisearch) o campos normalizados (fuera de alcance).
 
 ---
 
@@ -523,6 +529,8 @@ El rol **se decide por el correo y no por lo que el usuario escoja**: el selecto
 
 > El intento de auto-promoción rechazado por la regla **ya no es el mecanismo de seguridad principal**: ahora la puerta es `email_verified`. El reintento de rol solo resuelve la mala selección del usuario (UX), mientras que la autoridad última del rol sigue siendo la regla de Firestore.
 
+**Excepción Google.** Firebase puede no marcar `email_verified` para el proveedor `google.com`. La app considera confiable esa identidad porque Google ya validó el correo, y las reglas aplican la misma excepción con `correoConfiable()` (`sign_in_provider == 'google.com'`). El acceso usa el selector nativo (`google_sign_in`) y `signInWithCredential` con el ID token, sin pasar por el navegador. No hay restricción de dominio: se acepta cualquier cuenta de Google (decisión del proyecto) y el rol administrativo sigue dependiendo de `admins_permitidos`. La configuración de Firebase se documenta en `docs/configuracion_google.md`.
+
 ```mermaid
 sequenceDiagram
     participant U as Usuario
@@ -701,7 +709,7 @@ sequenceDiagram
     S->>S: genera reportId ANTES del batch (se reutiliza en reintentos)
     S->>S: prepara IDs deterministas: historialId = reportId+'_inicial'; notifId = reportId+'_creado'
     S->>S: construye WriteBatch (1 commit atómico: reporte + historial + notificación)
-    S->>FS: batch: addDoc reports/{reportId} { uid, correoAutor, tipoDano, edificio, piso, salon, descripcion, tieneFoto:true, estado:'Pendiente' }
+    S->>FS: batch: addDoc reports/{reportId} { uid, correoAutor, tipoUbicacion, tipoDano, edificio, piso, espacio, referencia, ubicacionTexto, descripcion, tieneFoto:true, estado:'Pendiente' }
     S->>FS: batch: addDoc reports/{reportId}/historial/{reportId}_inicial { estadoAnterior:'Pendiente', estadoNuevo:'Pendiente' }
     S->>FS: batch: setDoc notifications/{reportId}_creado { destinoRol:'administrativo', tipo:'reporte', evento:'creado', autorUid:auth.uid, titulo:'Nuevo reporte de daño', mensaje, reportId, creadoEn }
     Note over FS: getAfter/existsAfter validan DENTRO del batch (§8.4):
@@ -714,10 +722,9 @@ sequenceDiagram
     S->>FS: ¿existe reports/{reportId} con uid == auth.uid?  (1 get)
     Note over S: existe y uid propio -> el intento previo tuvo ÉXITO (batch atómico): se continúa como éxito, sin duplicar
     Note over S: no existe -> PERMISSION_DENIED es un rechazo real de las reglas: se informa al usuario
-    S->>M: setDoc reports/{reportId}/media/foto { base64(~500KB), tamanoBytes, mimeType, creadoEn }  (post-batch, NO atómica)
-    Note over FS: regla media usa get(reports/{id}) — el reporte YA existe tras el batch
-    Note over FS: si la foto falla el reporte persiste (tieneFoto:true) y la app reintenta/muestra placeholder
-    Note over A: onSnapshot(reports) -> "Daños Reportados" (12.png) refrescada
+    S->>FS: batch: setDoc reports/{reportId}/media/foto { base64(~500KB), tamanoBytes, mimeType, creadoEn } (DENTRO del batch atomico, i8.1)
+    Note over FS: regla media/foto usa getAfter(reporteDoc(reporteId)) -- la foto y el reporte se crean juntos (T2)
+    Note over FS: atomica: si la foto falla, el reporte tampoco existe (mismo batch)
     Note over A: onSnapshot(destinoRol=='administrativo', creadoEn desc) -> bandeja 13.png
     Note over A: badge = notif visibles ∩ users/uid/notificacionesLeidas; NotificacionesService emite alerta local (ver §9)
 ```
@@ -759,7 +766,8 @@ sequenceDiagram
 | :--- | :--- | :--- |
 | `flutter` | sdk | Framework UI multiplataforma. |
 | `firebase_core` | ^3.x | Inicialización (bootstrap) de Firebase en cada plataforma (RF obligatorio para todo lo demás). |
-| `firebase_auth` | ^5.x | Autenticación correo/contraseña, restablecimiento de contraseña (RF-01, RF-03, RF-10). |
+| `firebase_auth` | ^6.x | Autenticación correo/contraseña, inicio de sesión con Google, verificación de correo y restablecimiento de contraseña (RF-01, RF-03, RF-10, RF-20). |
+| `google_sign_in` | ^7.x | Selector nativo de cuentas de Google; entrega el ID token que se valida con `signInWithCredential` (RF-20). |
 | `cloud_firestore` | ^5.x | Persistencia de datos, subcolección `historial` y `media`, streams en tiempo real y caché offline (RNF-04). |
 | `flutter_riverpod` | ^2.x | Gestión de estado y DI (sección 1.2). |
 | `image_picker` | ^1.x | Capturar la evidencia desde cámara o galería (RF-11, 8.png). |
@@ -782,6 +790,10 @@ sequenceDiagram
 - **Estado**: *activo* (se implementa así; no requiere plan Blaze).
 - La foto se captura (`image_picker`), se comprime en el cliente a **~500–600 KB** (`flutter_image_compress`) y se codifica en Base64.
 - Se guarda en **`reports/{id}/media/foto`** (documento separado). El reporte solo almacena **`tieneFoto: boolean`**; las consultas de lista (índices 1–4) no descargan la imagen, solo el detalle pide `media/foto` (RNF-02).
+
+- **T2 (atómica)**: la foto se escribe **EN EL MISMO `WriteBatch` que el reporte** (no post-batch): `batch.set(media/foto, {base64, tamanoBytes, mimeType, creadoEn})` junto con `reports/{reportId}`, `historial/_inicial` y `notifications/{reportId}_creado` en UN commit atómico (`§6.2`). El reporte guarda `tieneFoto: fotoBase64 != null`.
+- La regla `media/foto` usa **`getAfter(reportDoc(reportId))`** para validar el reporte DENTRO del batch (autor == auth.uid), no `get()` (que leería el estado pre-batch). Si la foto falla, falla TODO el batch: nunca queda un reporte sin foto cuando `tieneFoto:true` (RNF-06/§8.1).
+- Reintento idempotente (T2/§6.3): si el commit con foto devuelve `PERMISSION_DENIED`, se consulta `reports/{reportId}`; si existe con `uid == auth.uid`, el batch previo SI se completó (foto incluida) y se continúa como éxito sin duplicar (misma lógica atómica §6.2).
 - **Interfaz `FotoRepository`** (dominio `reportes`): `subir(foto, reportId)`, `obtener(reportId)`.
   - **`FotoBase64Repository`** *(activa)*: comprime + Base64 → `media/foto`.
   - **`FotoStorageRepository`** *(futura, requiere Blaze)*: sube a Firebase Storage y expone la URL (misma interfaz, misma firma; §9).
@@ -793,12 +805,12 @@ sequenceDiagram
 - Modelo (detalle en §2.6):
   - Documento en `notifications` con **destino por usuario** (`uidDestino`, persona) o **destino por rol** (`destinoRol == 'administrativo'`, broadcast para todos los admins).
   - La notificación es **inmutable** (sin update/delete); el estado leída/no leída vive en `users/{uid}/notificacionesLeidas/{notifId}` por usuario.
-  - Listener: `onSnapshot(where uidDestino == miuid)` para la persona y `onSnapshot(where destinoRol == 'administrativo')` para el admin → reanima el `StreamProvider` → `NotificacionesService` muestra la alerta local (`flutter_local_notifications`).
+  - Listener: `onSnapshot(where uidDestino == miuid)` para la persona y `onSnapshot(where destinoRol == 'administrativo')` para el admin → reanima el `StreamProvider` → `LocalNotificacionesService` muestra la alerta local (`flutter_local_notifications`).
   - Badge de no leídas = intersección entre notificaciones visibles y `notificacionesLeidas` (sin índices extra).
 - **Interfaz `NotificacionesService`** (dominio `notificaciones`): `mostrar(titulo, mensaje, reportId)`, `inicializar()`.
   - **`LocalNotificacionesService`** *(activa)*: `flutter_local_notifications`; sin dependencia de FCM.
   - **`FcmNotificacionesService`** *(futura, requiere Blaze)*: delega en Firebase Cloud Messaging; el disparo real ocurre por Cloud Function (`onCreate` de `notifications`), ver §9.
-- **Limitación documentada**: con la implementación local, si el `uidDestino` no tiene la app abierta o el proceso suspendido, la alerta no se muestra hasta que abra la app y el listener vuelva a sincronizar (Firestore entrega los cambios pendientes). El historial siempre queda en la bandeja.
+- **Limitación documentada y verificada en dispositivo real**: con la implementación local, si el `uidDestino` no tiene la app abierta o el proceso suspendido (segundo plano o cerrada), **la alerta local NO se muestra en ese momento**; solo se ve al reabrir la app, momento en el que el listener de Firestore sincroniza y la notificación aparece en la bandeja (historial persistente). Esto se probó en dispositivo físico Android y se confirma el comportamiento esperado. Dejar preparado para Fase futura con Cloud Functions + FCM cuando se active el plan Blaze (§9).
 
 ### 8.3. Tabla de decisiones
 
@@ -876,3 +888,13 @@ La app está diseñada para funcionar en el **plan Spark (gratuito)** con dos se
 | RF-14 / RF-15 | `features/admin`, `reports/{id}` + `reports/{id}/historial` + índices 2-4; transición en WriteBatch atómico con reintento idempotente por ID determinista (§6.3, requisitos §6.3.3) |
 | RF-16 / RF-17 / RF-18 | `features/notificaciones`, `notifications/{id}` (`uidDestino`/`destinoRol`/`evento` + `notifId` determinista) + `users/{uid}/notificacionesLeidas` + `NotificacionesService` (local activa §8.2, FCM futura §9) |
 | RF-19 | `signOut()` + limpieza de estado Riverpod |
+
+---
+
+## 11. Mejoras futuras / deuda técnica conocida
+
+Deuda documentada sin implementar en esta entrega (v1 Spark):
+
+- **Paginación Firestore**: `watchMisReportes`, `watchTodosLosReportes` (`lib/features/reportes/data/firebase_reporte_repository.dart:140,183`) y `watchNotificaciones*` (`lib/features/notificaciones/data/firebase_notificacion_repository.dart:16,28`) actualmente sin `limit()`; con volumen pequeño no afecta RNF-02, pero al crecer debe añadirse `limit(30-50)` + `startAfterDocument` para coste y memoria.
+- **Área táctil**: `lib/shared/widgets/circular_button_uts.dart:30` usa `44x44` y `ChoiceChip` en `lib/features/admin/presentation/reported_damages_screen.dart` / `manage_report_screen.dart` (~32dp alto) por debajo de 48dp recomendado; queda para revisión de diseño futura sin impacto funcional actual.
+- **Compresión fotos**: `lib/features/reportes/presentation/report_damage_screen.dart:68` comprime a `quality 80` → fallback `55` (~500KB) y `lib/features/reportes/data/firebase_reporte_repository.dart:59` valida `tamanoBytes <=704640`; caso límite de imagen muy grande aún podría superar el tope tras 2 compresiones; a futuro limitar dimensiones con `minWidth/minHeight` o `quality` dinámico.

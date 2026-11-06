@@ -47,11 +47,7 @@ class UtsLogo extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Container(
-            width: 1.2,
-            height: altura * 0.8,
-            color: AppColors.divider,
-          ),
+          Container(width: 1.2, height: altura * 0.8, color: AppColors.divider),
           const SizedBox(width: 10),
           Text(
             'Unidades\nTecnológicas de\nSantander',

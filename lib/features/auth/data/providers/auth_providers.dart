@@ -5,8 +5,9 @@ import '../../domain/auth_repository.dart';
 import '../../domain/registro_intentado.dart';
 
 /// Repositorio de autenticación inyectable (se sobreescribe en pruebas).
-final authRepositoryProvider =
-    Provider<AuthRepository>((ref) => FirebaseAuthRepository());
+final authRepositoryProvider = Provider<AuthRepository>(
+  (ref) => FirebaseAuthRepository(),
+);
 
 /// Registro pendiente de verificación de correo (§4): se conserva en memoria
 /// mientras el usuario confirma el enlace y se limpia al crear el perfil o
@@ -22,4 +23,5 @@ class RegistroIntentadoController extends Notifier<RegistroIntentado?> {
 
 final registroIntentadoProvider =
     NotifierProvider<RegistroIntentadoController, RegistroIntentado?>(
-        RegistroIntentadoController.new);
+      RegistroIntentadoController.new,
+    );

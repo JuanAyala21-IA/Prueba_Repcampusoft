@@ -44,6 +44,10 @@ abstract final class AppColors {
   /// Estado: Rechazado (gris oscuro, sin confundir con Pendiente).
   static const Color estadoRechazado = Color(0xFF616161);
 
+  /// Fondo oliva oscuro para WelcomeScreen (variante oscura de utsGreen).
+  static const Color welcomeBackground = Color(0xFF6B7C00);
+
   /// Sombra suave de las tarjetas (Design System §1.3).
-  static Color sombraTarjeta(double opacidad) => Colors.black.withValues(alpha: opacidad);
+  static Color sombraTarjeta(double opacidad) =>
+      Colors.black.withValues(alpha: opacidad);
 }

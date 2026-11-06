@@ -14,6 +14,7 @@ class ReportCard extends StatelessWidget {
     required this.estado,
     this.fecha,
     this.icono,
+    this.asignadoNombre,
     this.onTap,
   });
 
@@ -22,6 +23,10 @@ class ReportCard extends StatelessWidget {
   final EstadoReporte estado;
   final String? fecha;
   final IconData? icono;
+
+  /// Nombre del encargado de mantenimiento que tomó el reporte (null si aún
+  /// no lo ha tomado nadie).
+  final String? asignadoNombre;
   final VoidCallback? onTap;
 
   @override
@@ -56,8 +61,11 @@ class ReportCard extends StatelessWidget {
                     color: AppColors.surface,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icono ?? Icons.report_problem_outlined,
-                      color: AppColors.textPrimary, size: 22),
+                  child: Icon(
+                    icono ?? Icons.report_problem_outlined,
+                    color: AppColors.textPrimary,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -73,8 +81,11 @@ class ReportCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Icons.location_on_outlined,
-                              size: 14, color: AppColors.textSecondary),
+                          const Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
                           const SizedBox(width: 3),
                           Expanded(
                             child: Text(
@@ -96,6 +107,42 @@ class ReportCard extends StatelessWidget {
                           ),
                         ),
                       ],
+                      if (asignadoNombre != null &&
+                          asignadoNombre!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.build_outlined,
+                                size: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  'Asignado a ${asignadoNombre!.trim()}',
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -105,7 +152,10 @@ class ReportCard extends StatelessWidget {
                   children: [
                     StatusBadge(estado: estado),
                     const SizedBox(height: 8),
-                    const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: AppColors.textSecondary,
+                    ),
                   ],
                 ),
               ],

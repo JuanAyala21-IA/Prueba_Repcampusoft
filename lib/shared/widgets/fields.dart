@@ -55,7 +55,11 @@ class _PillFieldState extends State<PillField> {
         suffixIcon: widget.esContrasena
             ? IconButton(
                 onPressed: () => setState(() => _oculto = !_oculto),
-                icon: Icon(_oculto ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                icon: Icon(
+                  _oculto
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
               )
             : null,
         enabledBorder: widget.borde
@@ -64,7 +68,10 @@ class _PillFieldState extends State<PillField> {
                 borderSide: BorderSide(color: AppColors.divider, width: 1),
               )
             : null,
-        errorStyle: const TextStyle(color: AppColors.estadoPendiente, fontSize: 12),
+        errorStyle: const TextStyle(
+          color: AppColors.estadoPendiente,
+          fontSize: 12,
+        ),
       ),
     );
   }
@@ -101,34 +108,93 @@ class _LabelledFieldState extends State<LabelledField> {
 
   @override
   Widget build(BuildContext context) {
+    // La descripción (multilínea) se muestra como caja redondeada, no como
+    // línea inferior: es más cómoda de leer y de escribir.
+    final bool esCaja = widget.multiline;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(widget.etiqueta, style: AppTypography.textTheme.titleSmall),
+        Text(
+          widget.etiqueta,
+          style: AppTypography.textTheme.titleSmall?.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         const SizedBox(height: 6),
         TextFormField(
           controller: widget.controlador,
-          maxLines: widget.multiline ? 5 : 1,
+          maxLines: widget.multiline ? 6 : 1,
+          minLines: widget.multiline ? 4 : 1,
+          textAlignVertical: widget.multiline
+              ? TextAlignVertical.top
+              : TextAlignVertical.center,
+          keyboardType: widget.multiline ? TextInputType.multiline : null,
           obscureText: widget.esContrasena ? _oculto : false,
           style: AppTypography.textTheme.bodyMedium,
           validator: widget.validator,
           decoration: InputDecoration(
-            filled: false,
+            filled: esCaja,
+            fillColor: AppColors.surface,
             hintText: widget.hint ?? widget.etiqueta,
             hintStyle: AppTypography.textTheme.bodySmall,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-            enabledBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.divider, width: 1),
+            contentPadding: esCaja
+                ? const EdgeInsets.symmetric(horizontal: 14, vertical: 14)
+                : const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+            enabledBorder: esCaja
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: AppColors.divider,
+                      width: 1,
+                    ),
+                  )
+                : const UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.divider, width: 1),
+                  ),
+            focusedBorder: esCaja
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: AppColors.utsGreen,
+                      width: 1.8,
+                    ),
+                  )
+                : const UnderlineInputBorder(
+                    borderSide: BorderSide(
+                      color: AppColors.utsGreen,
+                      width: 1.6,
+                    ),
+                  ),
+            errorBorder: esCaja
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: AppColors.estadoPendiente,
+                      width: 1.2,
+                    ),
+                  )
+                : null,
+            focusedErrorBorder: esCaja
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: AppColors.estadoPendiente,
+                      width: 1.6,
+                    ),
+                  )
+                : null,
+            errorStyle: const TextStyle(
+              color: AppColors.estadoPendiente,
+              fontSize: 12,
             ),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.utsGreen, width: 1.6),
-            ),
-            errorStyle: const TextStyle(color: AppColors.estadoPendiente, fontSize: 12),
             suffixIcon: widget.esContrasena
                 ? IconButton(
                     onPressed: () => setState(() => _oculto = !_oculto),
                     icon: Icon(
-                      _oculto ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      _oculto
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
                       size: 20,
                     ),
                   )

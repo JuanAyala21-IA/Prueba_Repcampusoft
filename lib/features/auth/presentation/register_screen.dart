@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:go_router/go_router.dart';
+
+import '../../../core/routes/app_router.dart';
 import '../../../core/routes/session_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -8,12 +11,12 @@ import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/circular_button_uts.dart';
 import '../../../shared/widgets/fields.dart';
 import '../../../shared/widgets/primary_button.dart';
-import '../../../shared/widgets/uts_logo.dart';
-import '../domain/rol_enum.dart';
 import 'auth_widgets.dart';
 
-/// Pantalla 3: Registro de Usuario (RF-03, RF-04, HU-02). Crea la cuenta y
+/// Pantalla 3: Registro de estudiantes (RF-03, HU-02). Crea la cuenta y
 /// envía verificación; el perfil `users/{uid}` se crea al verificar el correo.
+/// Los roles administrativo, mantenimiento y superadministrador no se eligen
+/// aquí: los crea únicamente el superadministrador.
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -27,29 +30,47 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _correo = TextEditingController();
   final _clave = TextEditingController();
   final _confirmar = TextEditingController();
-  final _cargo = TextEditingController();
-  RolEnum _rol = RolEnum.persona;
   bool _enviando = false;
+  bool _enviandoGoogle = false;
+
+  Future<void> _registrarConGoogle() async {
+    FocusScope.of(context).unfocus();
+    setState(() => _enviandoGoogle = true);
+    final String? error = await ref
+        .read(sesionProvider.notifier)
+        .iniciarSesionConGoogle();
+    if (!mounted) return;
+    setState(() => _enviandoGoogle = false);
+    if (error != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error)));
+    }
+  }
 
   Future<void> _registrar() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
     setState(() => _enviando = true);
-    final String? error = await ref.read(sesionProvider.notifier).registrar(
+    final String? error = await ref
+        .read(sesionProvider.notifier)
+        .registrar(
           nombre: _nombre.text,
           correo: _correo.text,
           contrasena: _clave.text,
-          cargo: _cargo.text,
-          rolIntentado: _rol,
         );
     if (!mounted) return;
     setState(() => _enviando = false);
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error)));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Cuenta creada. Revisa tu correo institucional y confirma el enlace de verificación.'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cuenta creada. Revisa tu correo institucional y confirma el enlace de verificación.',
+          ),
+        ),
+      );
     }
   }
 
@@ -59,95 +80,147 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _correo.dispose();
     _clave.dispose();
     _confirmar.dispose();
-    _cargo.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            children: [
-              Row(
+      extendBody: true,
+      body: Stack(
+        children: [
+          Container(color: AppColors.background, height: screenHeight),
+          Positioned.fill(child: CustomPaint(painter: _CurvaVerdeInferior())),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
                 children: [
-                  CircularButtonUts(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                  ),
-                  const Expanded(child: Center(child: UtsLogo(altura: 40, compacto: true))),
-                  const SizedBox(width: 44),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Text('REGISTRO',
-                  textAlign: TextAlign.center, style: AppTypography.textTheme.titleLarge),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x14000000),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Form(
-                  key: _formKey,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      LabelledField(
-                        etiqueta: 'Nombre completo',
-                        controlador: _nombre,
-                        validator: Validators.requerido,
+                      CircularButtonUts(
+                        onPressed: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go(AppRoutes.welcome);
+                          }
+                        },
                       ),
-                      const SizedBox(height: 16),
-                      LabelledField(
-                        etiqueta: 'Correo',
-                        controlador: _correo,
-                        validator: Validators.correo,
-                      ),
-                      const SizedBox(height: 16),
-                      LabelledField(
-                        etiqueta: 'Contraseña',
-                        controlador: _clave,
-                        esContrasena: true,
-                        validator: Validators.contrasena,
-                      ),
-                      const SizedBox(height: 16),
-                      LabelledField(
-                        etiqueta: 'Confirmar clave',
-                        controlador: _confirmar,
-                        esContrasena: true,
-                        validator: (valor) => Validators.confirmarContrasena(
-                          campo: _clave.text,
-                          valor: valor,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      LabelledField(etiqueta: 'Cargo (opcional)', controlador: _cargo),
-                      const SizedBox(height: 22),
-                      RolSelector(seleccion: _rol, onChanged: (rol) => setState(() => _rol = rol)),
-                      const SizedBox(height: 22),
-                      PrimaryButton(
-                        texto: _enviando ? 'Registrando…' : 'REGISTRARSE',
-                        onPressed: _enviando ? null : _registrar,
-                      ),
+                      const Spacer(),
+                      const SizedBox(width: 44),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'REGISTRO',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x14000000),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LabelledField(
+                            etiqueta: 'Nombre completo',
+                            controlador: _nombre,
+                            validator: Validators.requerido,
+                          ),
+                          const SizedBox(height: 16),
+                          LabelledField(
+                            etiqueta: 'Correo',
+                            controlador: _correo,
+                            validator: Validators.correo,
+                          ),
+                          const SizedBox(height: 16),
+                          LabelledField(
+                            etiqueta: 'Contraseña',
+                            controlador: _clave,
+                            esContrasena: true,
+                            validator: Validators.contrasena,
+                          ),
+                          const SizedBox(height: 16),
+                          LabelledField(
+                            etiqueta: 'Confirmar contraseña',
+                            controlador: _confirmar,
+                            esContrasena: true,
+                            validator: (valor) =>
+                                Validators.confirmarContrasena(
+                                  campo: _clave.text,
+                                  valor: valor,
+                                ),
+                          ),
+                          const SizedBox(height: 22),
+                          PrimaryButton(
+                            texto: _enviando ? 'Registrando…' : 'REGISTRARSE',
+                            onPressed: (_enviando || _enviandoGoogle)
+                                ? null
+                                : _registrar,
+                          ),
+                          const SizedBox(height: 16),
+                          const AuthDivider(),
+                          const SizedBox(height: 16),
+                          GoogleSignInButton(
+                            texto: 'Registrarme con Google',
+                            onPressed: (_enviando || _enviandoGoogle)
+                                ? null
+                                : _registrarConGoogle,
+                            cargando: _enviandoGoogle,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
+}
+
+/// Fondo curvo verde UTS en la parte inferior (pantalla 1.png).
+class _CurvaVerdeInferior extends CustomPainter {
+  const _CurvaVerdeInferior();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()..color = AppColors.utsGreen;
+    final Path path = Path()
+      ..moveTo(0, size.height * 0.60)
+      ..cubicTo(
+        size.width * 0.18,
+        size.height * 0.50,
+        size.width * 0.4,
+        size.height * 0.60,
+        size.width,
+        size.height * 0.54,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

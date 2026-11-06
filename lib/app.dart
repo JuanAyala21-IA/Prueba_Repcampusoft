@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/notificaciones/data/providers/notificacion_providers.dart';
 
 /// Widget raíz: MaterialApp.router con el proveedor Riverpod encima.
 class RepcampusoftApp extends ConsumerWidget {
@@ -12,6 +13,8 @@ class RepcampusoftApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Inicializa FCM y las notificaciones locales una sola vez.
+    ref.watch(notificacionesBootstrapProvider);
     final GoRouter router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'REPCAMPUSOFT',

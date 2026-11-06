@@ -5,7 +5,8 @@ import 'package:repcampusoft/features/auth/data/firebase_auth_messages.dart';
 
 void main() {
   group('mensajeFirebase (auth)', () {
-    String msg(String code) => mensajeFirebase(FirebaseAuthException(code: code));
+    String msg(String code) =>
+        mensajeFirebase(FirebaseAuthException(code: code));
 
     test('credenciales inválidas', () {
       expect(msg('user-not-found'), 'Correo o contraseña incorrectos.');
@@ -14,11 +15,17 @@ void main() {
     });
 
     test('correo en uso', () {
-      expect(msg('email-already-in-use'), 'Este correo ya está registrado. Prueba iniciando sesión.');
+      expect(
+        msg('email-already-in-use'),
+        'Este correo ya está registrado. Prueba iniciando sesión.',
+      );
     });
 
     test('contraseña débil', () {
-      expect(msg('weak-password'), 'La contraseña debe tener al menos 6 caracteres.');
+      expect(
+        msg('weak-password'),
+        'La contraseña debe tener al menos 6 caracteres.',
+      );
     });
 
     test('red caída', () {
@@ -38,6 +45,27 @@ void main() {
       expect(msg('operation-not-allowed'), contains('no está habilitado'));
     });
 
+    test('cuenta existente con otro proveedor', () {
+      expect(
+        msg('account-exists-with-different-credential'),
+        contains('Ya existe una cuenta con este correo usando contraseña'),
+      );
+    });
+
+    test('inicio de sesión cancelado', () {
+      expect(msg('web-context-canceled'), 'Inicio de sesión cancelado.');
+      expect(msg('web-context-cancelled'), 'Inicio de sesión cancelado.');
+      expect(msg('cancelled'), 'Inicio de sesión cancelado.');
+      expect(msg('canceled'), 'Inicio de sesión cancelado.');
+    });
+
+    test('fallo del selector nativo de Google', () {
+      expect(
+        msg('google-sign-in-failed'),
+        'No se pudo iniciar sesión con Google. Inténtalo de nuevo.',
+      );
+    });
+
     test('error desconocido conserva el código', () {
       expect(msg('algo-raro'), contains('algo-raro'));
     });
@@ -46,14 +74,18 @@ void main() {
   group('mensajeFirebase (firestore)', () {
     test('permiso denegado', () {
       expect(
-        mensajeFirebase(FirebaseException(plugin: 'firestore', code: 'permission-denied')),
+        mensajeFirebase(
+          FirebaseException(plugin: 'firestore', code: 'permission-denied'),
+        ),
         contains('No tienes permiso'),
       );
     });
 
     test('servicio ocupado', () {
       expect(
-        mensajeFirebase(FirebaseException(plugin: 'firestore', code: 'unavailable')),
+        mensajeFirebase(
+          FirebaseException(plugin: 'firestore', code: 'unavailable'),
+        ),
         contains('ocupado'),
       );
     });

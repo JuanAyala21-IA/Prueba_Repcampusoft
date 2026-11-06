@@ -2,15 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../shared/widgets/uts_logo.dart';
 
 /// Encabezado de las pantallas de inicio (4.png, 5.png): avatar, nombre y subtítulo.
 class UserHeader extends StatelessWidget {
-  const UserHeader({
-    super.key,
-    required this.nombre,
-    required this.subtitulo,
-  });
+  const UserHeader({super.key, required this.nombre, required this.subtitulo});
 
   final String nombre;
   final String subtitulo;
@@ -22,7 +17,7 @@ class UserHeader extends StatelessWidget {
         Row(
           children: [
             const SizedBox(width: 44),
-            const Expanded(child: Center(child: UtsLogo(altura: 40, compacto: true))),
+            const Expanded(child: Center(child: SizedBox(height: 40))),
             SizedBox(
               width: 44,
               child: Center(
@@ -33,7 +28,11 @@ class UserHeader extends StatelessWidget {
                     color: AppColors.textPrimary,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.person, color: Colors.white, size: 20),
+                  child: const Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
             ),

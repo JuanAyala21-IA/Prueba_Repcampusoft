@@ -1,4 +1,5 @@
-/// Resultado sellado para operaciones (Fase 3: esqueleto, sin lógica de negocio).
+// Resultado sellado para operaciones (Fase 3: esqueleto, sin lógica de negocio).
+
 sealed class Result<T> {
   const Result();
 }

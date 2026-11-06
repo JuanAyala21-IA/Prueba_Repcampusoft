@@ -55,3 +55,11 @@ firebase.json
 .firebase/
 **/*.apk.idsig
 **/.firebase/
+
+# Cloud Functions
+functions/node_modules/
+functions/.firebase/
+functions/*.log
+
+# Salidas locales de compilación Android (regenerables con flutter build)
+/android/build/

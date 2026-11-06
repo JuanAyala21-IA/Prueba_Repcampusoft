@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/routes/app_router.dart';
 import '../../core/theme/app_typography.dart';
 import 'circular_button_uts.dart';
-import 'uts_logo.dart';
 
 /// Encabezado común de las pantallas con logo UTS, título y retroceso circular.
 /// [accion] permite colocar un icono de campana con badge, avatar, etc.
+/// [retrocesoADerecha] si true, pone el botón de retroceso a la derecha (para AboutScreen).
 class UtsHeader extends StatelessWidget {
   const UtsHeader({
     super.key,
@@ -15,6 +17,7 @@ class UtsHeader extends StatelessWidget {
     this.onBack,
     this.mostrarRetroceso = true,
     this.mostrarLogo = true,
+    this.retrocesoADerecha = false,
   });
 
   final String titulo;
@@ -22,12 +25,25 @@ class UtsHeader extends StatelessWidget {
   final Widget? accion;
   final VoidCallback? onBack;
   final bool mostrarRetroceso;
-
-  /// Oculta el logo cuando la pantalla lo dibuja más grande (ej. login).
   final bool mostrarLogo;
+  final bool retrocesoADerecha;
 
   @override
   Widget build(BuildContext context) {
+    final backButton = mostrarRetroceso
+        ? CircularButtonUts(
+            onPressed:
+                onBack ??
+                () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(AppRoutes.welcome);
+                  }
+                },
+          )
+        : const SizedBox(width: 44, height: 44);
+
     return SafeArea(
       bottom: false,
       child: Padding(
@@ -37,17 +53,26 @@ class UtsHeader extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: 44,
-                  child: mostrarRetroceso
-                      ? CircularButtonUts(
-                          onPressed: onBack ?? () => Navigator.of(context).maybePop(),
-                        )
-                      : null,
-                ),
+                if (!retrocesoADerecha) SizedBox(width: 44, child: backButton),
                 if (mostrarLogo)
-                  const Expanded(child: Center(child: UtsLogo(altura: 40, compacto: true))),
-                SizedBox(width: 44, child: accion == null ? null : Center(child: accion)),
+                  const Expanded(
+                    child: Center(
+                      child: Image(
+                        image: AssetImage('assets/images/logo_uts.png'),
+                        height: 32,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  )
+                else
+                  const Expanded(child: SizedBox()),
+                if (retrocesoADerecha)
+                  SizedBox(width: 44, child: backButton)
+                else
+                  SizedBox(
+                    width: 44,
+                    child: accion == null ? null : Center(child: accion),
+                  ),
               ],
             ),
             const SizedBox(height: 14),

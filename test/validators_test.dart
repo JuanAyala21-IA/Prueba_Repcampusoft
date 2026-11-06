@@ -42,11 +42,18 @@ void main() {
 
   group('Validators.confirmarContrasena', () {
     test('valida coincidencia', () {
-      expect(Validators.confirmarContrasena(campo: 'abc123', valor: ''),
-          'Confirma tu contraseña');
-      expect(Validators.confirmarContrasena(campo: 'abc123', valor: 'xyz789'),
-          'Las contraseñas no coinciden');
-      expect(Validators.confirmarContrasena(campo: 'abc123', valor: 'abc123'), isNull);
+      expect(
+        Validators.confirmarContrasena(campo: 'abc123', valor: ''),
+        'Confirma tu contraseña',
+      );
+      expect(
+        Validators.confirmarContrasena(campo: 'abc123', valor: 'xyz789'),
+        'Las contraseñas no coinciden',
+      );
+      expect(
+        Validators.confirmarContrasena(campo: 'abc123', valor: 'abc123'),
+        isNull,
+      );
     });
   });
 }

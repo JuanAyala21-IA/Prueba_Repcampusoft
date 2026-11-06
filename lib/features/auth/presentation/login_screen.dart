@@ -10,7 +10,7 @@ import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/circular_button_uts.dart';
 import '../../../shared/widgets/fields.dart';
 import '../../../shared/widgets/primary_button.dart';
-import '../../../shared/widgets/uts_logo.dart';
+import 'auth_widgets.dart';
 
 /// Pantalla 1: Iniciar Sesión (RF-01, HU-01). El rol se resuelve desde
 /// `users/{uid}` según el gate §5.3, no por modo seleccionado.
@@ -26,6 +26,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _correo = TextEditingController();
   final _clave = TextEditingController();
   bool _enviando = false;
+  bool _enviandoGoogle = false;
 
   Future<void> _iniciarSesion() async {
     FocusScope.of(context).unfocus();
@@ -42,6 +43,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _iniciarSesionConGoogle() async {
+    FocusScope.of(context).unfocus();
+    setState(() => _enviandoGoogle = true);
+    final String? error = await ref
+        .read(sesionProvider.notifier)
+        .iniciarSesionConGoogle();
+    if (!mounted) return;
+    setState(() => _enviandoGoogle = false);
+    if (error != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error)));
+    }
+  }
+
   @override
   void dispose() {
     _correo.dispose();
@@ -51,28 +66,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
+      extendBody: true,
       body: Stack(
         children: [
-          const Positioned.fill(child: CustomPaint(painter: _CurvaVerdeInferior())),
+          Container(color: AppColors.background, height: screenHeight),
+          Positioned.fill(child: CustomPaint(painter: _CurvaVerdeInferior())),
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               child: Column(
                 children: [
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: CircularButtonUts(
-                      icono: Icons.question_mark,
-                      onPressed: () => context.go(AppRoutes.info),
-                    ),
+                  Row(
+                    children: [
+                      CircularButtonUts(
+                        onPressed: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go(AppRoutes.welcome);
+                          }
+                        },
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  const UtsLogo(altura: 60),
-                  const SizedBox(height: 16),
-                  Text('REPCAMPUSOFT', style: AppTypography.textTheme.displayLarge),
+                  const SizedBox(height: 24),
+                  Text(
+                    'REPCAMPUSOFT',
+                    style: AppTypography.textTheme.displayLarge,
+                  ),
                   const SizedBox(height: 4),
-                  Text('INICIAR SESIÓN', style: AppTypography.textTheme.titleMedium),
+                  Text(
+                    'INICIAR SESIÓN',
+                    style: AppTypography.textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 20),
                   Container(
                     padding: const EdgeInsets.all(22),
@@ -94,8 +122,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         children: [
                           const UserAvatarInline(),
                           const SizedBox(height: 12),
-                          Text('Ingresa tus credenciales',
-                              style: AppTypography.textTheme.titleSmall),
+                          Text(
+                            'Ingresa tus credenciales',
+                            style: AppTypography.textTheme.titleSmall,
+                          ),
                           const SizedBox(height: 18),
                           PillField(
                             hint: 'Correo institucional',
@@ -112,18 +142,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             controlador: _clave,
                             textInputAction: TextInputAction.done,
                             validator: Validators.contrasena,
-                            onFieldSubmitted: (_) => _enviando ? null : _iniciarSesion(),
+                            onFieldSubmitted: (_) =>
+                                _enviando ? null : _iniciarSesion(),
                           ),
                           const SizedBox(height: 20),
                           PrimaryButton(
                             texto: _enviando ? 'Ingresando…' : 'Iniciar sesión',
-                            onPressed: _enviando ? null : _iniciarSesion,
+                            onPressed: (_enviando || _enviandoGoogle)
+                                ? null
+                                : _iniciarSesion,
                           ),
-                          const SizedBox(height: 12),
-                          TextButton(
-                            onPressed: () => context.go(AppRoutes.registro),
-                            child: const Text('¿No tienes una cuenta? Registrate'),
+                          const SizedBox(height: 16),
+                          const AuthDivider(),
+                          const SizedBox(height: 16),
+                          GoogleSignInButton(
+                            onPressed: (_enviando || _enviandoGoogle)
+                                ? null
+                                : _iniciarSesionConGoogle,
+                            cargando: _enviandoGoogle,
                           ),
+                          const SizedBox(height: 8),
                           TextButton(
                             onPressed: () => context.go(AppRoutes.recuperar),
                             child: const Text('¿Olvidaste tu contraseña?'),
@@ -133,13 +171,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Text('- - - - - - - - - - - -',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.9))),
-                  const SizedBox(height: 8),
                   const Text(
                     'UTS - Universitaria Tecnologia de Santander',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -159,7 +198,10 @@ class UserAvatarInline extends StatelessWidget {
     return Container(
       width: 76,
       height: 76,
-      decoration: const BoxDecoration(color: AppColors.textPrimary, shape: BoxShape.circle),
+      decoration: const BoxDecoration(
+        color: AppColors.textPrimary,
+        shape: BoxShape.circle,
+      ),
       child: const Icon(Icons.person, color: Colors.white, size: 40),
     );
   }
@@ -173,9 +215,15 @@ class _CurvaVerdeInferior extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()..color = AppColors.utsGreen;
     final Path path = Path()
-      ..moveTo(0, size.height * 0.78)
-      ..cubicTo(size.width * 0.18, size.height * 0.68, size.width * 0.4, size.height * 0.78,
-          size.width, size.height * 0.72)
+      ..moveTo(0, size.height * 0.60)
+      ..cubicTo(
+        size.width * 0.18,
+        size.height * 0.50,
+        size.width * 0.4,
+        size.height * 0.60,
+        size.width,
+        size.height * 0.54,
+      )
       ..lineTo(size.width, size.height)
       ..lineTo(0, size.height)
       ..close();

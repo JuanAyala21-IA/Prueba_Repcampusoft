@@ -1,0 +1,38 @@
+rules_version = '2';
+
+// Reglas de Firebase Storage para las imÃ¡genes de los reportes.
+//
+// Rutas (incluyen el uid del que sube para validar propiedad sin llamadas
+// entre servicios):
+//   reports/{uploaderUid}/{reportId}/foto.jpg
+//   reports/{uploaderUid}/{reportId}/solucion.jpg
+//
+// Las imÃ¡genes se suben comprimidas (mÃ¡x. 1280 px JPEG) y se limitan a 2 MB
+// como salvaguarda. La integridad de los metadatos (quiÃ©n puede registrar la
+// foto de un reporte) la siguen validando las reglas de Firestore.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function esImagenValida() {
+      return request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType != null
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /reports/{uploaderUid}/{reportId}/{fileName} {
+      // Cualquier usuario autenticado puede ver las imÃ¡genes de los reportes.
+      allow read: if isAuth();
+
+      // Solo el dueÃ±o de la ruta puede subir/reemplazar sus imÃ¡genes.
+      allow create, update: if isAuth()
+        && request.auth.uid == uploaderUid
+        && fileName in ['foto.jpg', 'solucion.jpg']
+        && esImagenValida();
+
+      allow delete: if isAuth() && request.auth.uid == uploaderUid;
+    }
+  }
+}

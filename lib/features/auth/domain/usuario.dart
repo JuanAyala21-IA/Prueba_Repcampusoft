@@ -10,6 +10,7 @@ class Usuario {
     this.cargo,
     this.dependencia,
     this.telefono,
+    this.activo = true,
   });
 
   final String uid;
@@ -20,13 +21,28 @@ class Usuario {
   final String? dependencia;
   final String? telefono;
 
-  Usuario copyWith({RolEnum? rol}) => Usuario(
-        uid: uid,
-        nombre: nombre,
-        correo: correo,
-        rol: rol ?? this.rol,
-        cargo: cargo,
-        dependencia: dependencia,
-        telefono: telefono,
-      );
+  /// `false` cuando el superadministrador eliminó (desactivó) la cuenta.
+  /// La cuenta de Firebase Auth se conserva para auditoría, pero el gate de
+  /// sesión bloquea el acceso y las reglas de Firestore lo rechazan.
+  final bool activo;
+
+  bool get esSuperadministrador => rol == RolEnum.superadministrador;
+
+  Usuario copyWith({
+    String? nombre,
+    RolEnum? rol,
+    String? cargo,
+    String? dependencia,
+    String? telefono,
+    bool? activo,
+  }) => Usuario(
+    uid: uid,
+    nombre: nombre ?? this.nombre,
+    correo: correo,
+    rol: rol ?? this.rol,
+    cargo: cargo ?? this.cargo,
+    dependencia: dependencia ?? this.dependencia,
+    telefono: telefono ?? this.telefono,
+    activo: activo ?? this.activo,
+  );
 }

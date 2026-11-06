@@ -23,7 +23,11 @@ class StatusBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(estado.icono, size: compacto ? 12 : 14, color: estado.colorTexto),
+          Icon(
+            estado.icono,
+            size: compacto ? 12 : 14,
+            color: estado.colorTexto,
+          ),
           if (!compacto) ...[
             const SizedBox(width: 4),
             Text(

@@ -24,28 +24,63 @@ service cloud.firestore {
               evento == 'en_revision' ? 'En revision' :
               evento == 'en_proceso'  ? 'En proceso' :
               evento == 'solucionado' ? 'Solucionado' :
-              evento == 'rechazado'   ? 'Rechazado' : null);
+              evento == 'rechazado'   ? 'Rechazado' : '');
     }
 
     function canReadNotif(notifId) {
-      return get(notifDoc(notifId)).data.uidDestino == request.auth.uid
-          || (isAdministrativo()
-              && get(notifDoc(notifId)).data.destinoRol == 'administrativo');
+      let notif = get(notifDoc(notifId));
+      return notif.data.uidDestino == request.auth.uid
+          || (canManageReports()
+              && notif.data.destinoRol == 'administrativo')
+          || (isSuperadministrador()
+              && notif.data.destinoRol in ['administrativo', 'superadministrador']);
+    }
+
+    // `activo` se agregó con la gestión de usuarios. Los perfiles antiguos que
+    // no lo tienen se consideran activos; `false` bloquea todo acceso.
+    //
+    // IMPORTANTE: se usa `data.get('activo', true)` y NO `data.activo`, porque
+    // en Firestore Rules el acceso directo a un campo inexistente produce un
+    // error (no `null`). Ese error hacía que `isPersona()`/`isRol()` fallaran y
+    // que la consulta de "Tus reportes" devolviera PERMISSION_DENIED para las
+    // cuentas creadas antes de que existiera el campo `activo`.
+    function isActivo() {
+      let perfil = get(userDoc(request.auth.uid));
+      return isAuthenticated()
+        && perfil != null
+        && perfil.data.get('activo', true) != false;
     }
 
     function isRol(rol) {
+      let perfil = get(userDoc(request.auth.uid));
       return isAuthenticated()
-        && exists(userDoc(request.auth.uid))
-        && get(userDoc(request.auth.uid)).data.rol == rol;
+        && perfil != null
+        && perfil.data.get('activo', true) != false
+        && perfil.data.rol == rol;
     }
 
-    function isPersona()        { return isRol('persona'); }
-    function isAdministrativo() { return isRol('administrativo'); }
+    function isPersona()          { return isRol('persona'); }
+    function isAdministrativo()   { return isRol('administrativo'); }
+    function isMantenimiento()    { return isRol('mantenimiento'); }
+    function isSuperadministrador() { return isRol('superadministrador'); }
+
+    // Administrativos y encargados de mantenimiento gestionan los reportes.
+    function canManageReports() {
+      return isAdministrativo() || isMantenimiento();
+    }
 
     function isAllowedStateTransition(current, next) {
       return (current == 'Pendiente' && (next == 'En revision' || next == 'Rechazado'))
           || (current == 'En revision' && (next == 'En proceso' || next == 'Rechazado'))
           || (current == 'En proceso' && (next == 'Solucionado' || next == 'Rechazado'));
+    }
+
+    // Google no expone `email_verified` en el token de Firebase cuando el
+    // proveedor lo gestiona fuera de Firebase Auth; se confía en el proveedor
+    // porque Google ya validó la identidad para crear `users/{uid}`.
+    function correoConfiable() {
+      return request.auth.token.email_verified == true
+          || request.auth.token.firebase.sign_in_provider == 'google.com';
     }
 
     // ============ CATÁLOGOS (si se materializan en Firestore) ============
@@ -54,39 +89,71 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ============ LISTA BLANCA DE ADMINISTRATIVOS ============
-    match /admins_permitidos/{correo} {
+    // ============ SUPERADMINISTRADOR SEMBRADO MANUALMENTE ============
+    // Solo lectura desde reglas: el correo se registra en la consola. La app
+    // no puede escribir aquí.
+    match /super_admins_permitidos/{correo} {
       allow read, write: if false;
     }
 
     // ============ USUARIOS ============
     match /users/{uid} {
+      // Autorregistro público: solo `persona`. Excepción de bootstrap: el
+      // correo sembrado en `super_admins_permitidos` puede crear al
+      // superadministrador. El superadministrador activo puede crear cuentas
+      // de estudiante, administrativo y mantenimiento (la cuenta de Auth se
+      // crea con una instancia secundaria y el perfil se escribe desde su
+      // propia sesión).
       allow create: if isAuthenticated()
-        && request.auth.uid == uid
-        && request.auth.token.email_verified == true
-        && request.resource.data.correo == request.auth.token.email
         && (
-             (exists(/databases/$(database)/documents/admins_permitidos/$(request.resource.data.correo))
-               && request.resource.data.rol == 'administrativo')
-          || (!exists(/databases/$(database)/documents/admins_permitidos/$(request.resource.data.correo))
-               && request.resource.data.rol == 'persona')
+             (request.auth.uid == uid
+              && correoConfiable()
+              && request.resource.data.correo == request.auth.token.email
+              && request.resource.data.activo == true
+              && (
+                   (request.resource.data.rol == 'persona'
+                    && !exists(/databases/$(database)/documents/super_admins_permitidos/$(request.resource.data.correo)))
+                || (request.resource.data.rol == 'superadministrador'
+                    && exists(/databases/$(database)/documents/super_admins_permitidos/$(request.resource.data.correo)))
+              ))
+          || (isSuperadministrador()
+              && request.auth.uid != uid
+              && request.resource.data.rol in ['persona', 'administrativo', 'mantenimiento']
+              && request.resource.data.activo == true)
         );
 
-      allow read: if isAuthenticated() && request.auth.uid == uid;
+      allow read: if isAuthenticated()
+        && (request.auth.uid == uid || isSuperadministrador());
 
+      // El dueño actualiza sus datos personales, nunca su rol ni su estado.
+      // `get('activo', true)` evita el error de campo inexistente en perfiles
+      // creados antes de que existiera `activo` (ver nota en isActivo()).
       allow update: if isAuthenticated()
         && request.auth.uid == uid
         && request.resource.data.rol == resource.data.rol
+        && request.resource.data.get('activo', true) == resource.data.get('activo', true)
+        && request.resource.data.correo == resource.data.correo
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['nombre', 'telefono', 'fcmToken']);
+             .hasOnly(['nombre', 'telefono', 'cargo', 'dependencia', 'fcmToken', 'actualizadoEn']);
+
+      // Baja lógica del superadministrador: la cuenta de Auth se conserva para
+      // auditoría y el gate de sesión bloquea el acceso.
+      allow update: if isSuperadministrador()
+        && request.auth.uid != uid
+        && resource.data.rol != 'superadministrador'
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['activo', 'eliminadoEn', 'actualizadoEn'])
+        && request.resource.data.activo == false;
 
       allow delete: if false;
 
       match /notificacionesLeidas/{notifId} {
-        allow read: if request.auth.uid == uid
-          && exists(notifDoc(notifId))
-          && canReadNotif(notifId);
+        // Read (get o list): solo dueño. No hace falta re-verificar canReadNotif()
+        // porque estos docs son marcas privadas de lectura, no la notificación en sí.
+        allow read: if request.auth.uid == uid;
 
+        // Create/Update (marcar como leída): dueño + notificación existe + puede leerla.
+        // Evita que alguien marque como leída una notificación que no puede ver.
         allow create: if request.auth.uid == uid
           && exists(notifDoc(notifId))
           && canReadNotif(notifId)
@@ -106,31 +173,132 @@ service cloud.firestore {
 
     // ============ REPORTES ============
     match /reports/{reportId} {
-      allow read: if isPersona() && resource.data.uid == request.auth.uid
-                 || isAdministrativo();
+      allow read: if (isPersona() && resource.data.uid == request.auth.uid)
+                 || canManageReports()
+                 || isSuperadministrador();
 
       allow create: if isPersona()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.correoAutor == request.auth.token.email
-        && request.resource.data.estado == 'Pendiente';
+        && request.resource.data.estado == 'Pendiente'
+        // Validación server-side doble (cliente ya valida): no vacíos.
+        // Firestore Rules no tiene trim(), por eso se valida size()>0 y != "".
+        // Cliente hace trim(); server rechaza strings vacíos. Whitespace-only ("   ")
+        // pasaría size()>0 pero riesgo bajo y no crítico para esta entrega.
+        && request.resource.data.tipoUbicacion in [
+             'aula', 'laboratorio', 'sala_computo', 'bano', 'pasillo',
+             'oficina', 'auditorio', 'biblioteca', 'cafeteria', 'escaleras',
+             'ascensor', 'zona_exterior', 'parqueadero', 'acceso', 'otro'
+           ]
+        && request.resource.data.espacio is string && request.resource.data.espacio.size() > 0 && request.resource.data.espacio != ""
+        && request.resource.data.ubicacionTexto is string && request.resource.data.ubicacionTexto.size() > 0 && request.resource.data.ubicacionTexto != ""
+        && request.resource.data.tipoDano is string && request.resource.data.tipoDano.size() > 0 && request.resource.data.tipoDano != ""
+        && request.resource.data.descripcion is string && request.resource.data.descripcion.size() > 0 && request.resource.data.descripcion != ""
+        // Espacios interiores con piso: exigen edificio y piso (en
+        // escaleras/ascensor el piso guarda el tramo o el piso/cabina
+        // elegido). Auditorio y biblioteca no piden edificio ni piso;
+        // cafetería solo pide edificio. Zona exterior, parqueadero, acceso y
+        // "otro" no los exigen.
+        && (request.resource.data.tipoUbicacion in [
+              'aula', 'laboratorio', 'sala_computo', 'bano', 'pasillo',
+              'oficina', 'escaleras', 'ascensor'
+            ]
+            ? (request.resource.data.edificio is string
+               && request.resource.data.edificio.size() > 0
+               && request.resource.data.edificio != ""
+               && request.resource.data.piso is string
+               && request.resource.data.piso.size() > 0
+               && request.resource.data.piso != "")
+            : true)
+        // Cafetería: únicamente edificios A, C y E.
+        && (request.resource.data.tipoUbicacion != 'cafeteria'
+            || (request.resource.data.edificio is string
+                && request.resource.data.edificio in [
+                     'Edificio A', 'Edificio C', 'Edificio E'
+                   ]))
+        // Sala de cómputo: únicamente piso 3 de los edificios A y B.
+        && (request.resource.data.tipoUbicacion != 'sala_computo'
+            || (request.resource.data.edificio in [
+                  'Edificio A', 'Edificio B'
+                ]
+                && request.resource.data.piso == 'Piso 3'))
+        // Zona exterior: la referencia es la única forma de ubicar el daño.
+        && (request.resource.data.tipoUbicacion != 'zona_exterior'
+            || (request.resource.data.referencia is string
+                && request.resource.data.referencia.size() > 0
+                && request.resource.data.referencia != ""))
+        // T2/8.1 ATOMICO: si tieneFoto es true, media/foto debe existir en el after (existsAfter, mismo WriteBatch). Accesos: isPersona (user x2) + existsAfter x1 = 3 <= 10. Validaciones de texto son solo sobre request.resource.data (0 lecturas).
+        && (!request.resource.data.tieneFoto
+            || existsAfter(/databases/$(database)/documents/reports/$(reportId)/media/foto));
 
+      // Gestión por administrativo: puede supervisar y actualizar cualquier
+      // reporte, esté o no asignado a un encargado de mantenimiento.
       allow update: if isAdministrativo()
         && isAllowedStateTransition(resource.data.estado, request.resource.data.estado)
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['estado', 'observacionAdmin', 'actualizadoEn']);
+             .hasOnly(['estado', 'observacionAdmin', 'actualizadoEn', 'encargadoUid', 'encargadoNombre', 'tieneEvidenciaSolucion'])
+        && (request.resource.data.estado != 'Rechazado'
+            || (request.resource.data.observacionAdmin != null
+                && request.resource.data.observacionAdmin != ''))
+        // Al solucionar se registra quién atendió la reparación.
+        && (request.resource.data.estado != 'Solucionado'
+            || (request.resource.data.encargadoUid == request.auth.uid
+                && request.resource.data.encargadoNombre is string
+                && request.resource.data.encargadoNombre.size() > 0
+                // La evidencia fotográfica es obligatoria al solucionar.
+                && request.resource.data.tieneEvidenciaSolucion == true
+                && existsAfter(/databases/$(database)/documents/reports/$(reportId)/media/solucion)));
+
+      // El encargado de mantenimiento toma un reporte sin asignar. No cambia el
+      // estado: solo se registra como responsable exclusivo.
+      allow update: if isMantenimiento()
+        && resource.data.get('asignadoA', '') == ''
+        && request.resource.data.asignadoA == request.auth.uid
+        && request.resource.data.asignadoNombre is string
+        && request.resource.data.asignadoNombre.size() > 0
+        && request.resource.data.estado == resource.data.estado
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['asignadoA', 'asignadoNombre', 'asignadoEn', 'actualizadoEn']);
+
+      // Una vez tomado, SOLO el encargado asignado puede cambiar su estado.
+      allow update: if isMantenimiento()
+        && resource.data.get('asignadoA', '') == request.auth.uid
+        // Mantenimiento atiende y soluciona; rechazar es decisión del
+        // administrativo.
+        && request.resource.data.estado != 'Rechazado'
+        && isAllowedStateTransition(resource.data.estado, request.resource.data.estado)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['estado', 'observacionAdmin', 'actualizadoEn', 'encargadoUid', 'encargadoNombre', 'tieneEvidenciaSolucion'])
+        && (request.resource.data.estado != 'Rechazado'
+            || (request.resource.data.observacionAdmin != null
+                && request.resource.data.observacionAdmin != ''))
+        && (request.resource.data.estado != 'Solucionado'
+            || (request.resource.data.encargadoUid == request.auth.uid
+                && request.resource.data.encargadoNombre is string
+                && request.resource.data.encargadoNombre.size() > 0
+                // La evidencia fotográfica es obligatoria al solucionar.
+                && request.resource.data.tieneEvidenciaSolucion == true
+                && existsAfter(/databases/$(database)/documents/reports/$(reportId)/media/solucion)));
 
       allow delete: if false;
 
       match /historial/{historialId} {
-        allow read: if isAdministrativo()
+        allow read: if canManageReports()
+                   || isSuperadministrador()
                    || (isPersona()
                        && get(reportDoc(reportId)).data.uid == request.auth.uid);
 
-        allow create: if (isAdministrativo()
+        allow create: if (canManageReports()
                           && request.resource.data.estadoNuevo != request.resource.data.estadoAnterior
                           && get(reportDoc(reportId)).data.estado == request.resource.data.estadoAnterior
                           && getAfter(reportDoc(reportId)).data.estado == request.resource.data.estadoNuevo
-                          && historialId == reportId + '_' + request.resource.data.estadoNuevo)
+                          && historialId == reportId + '_' + request.resource.data.estadoNuevo
+                          && request.resource.data.adminUid == request.auth.uid
+                          && request.resource.data.adminNombre is string
+                          && request.resource.data.adminNombre.size() > 0
+                          && (request.resource.data.estadoNuevo != 'Rechazado'
+                              || (request.resource.data.observacion != null
+                                  && request.resource.data.observacion != '')))
                      || (isPersona()
                           && request.resource.data.estadoAnterior == 'Pendiente'
                           && request.resource.data.estadoNuevo == 'Pendiente'
@@ -142,13 +310,51 @@ service cloud.firestore {
       }
 
       match /media/{mediaId} {
-        allow read: if isPersona()
-                     && get(reportDoc(reportId)).data.uid == request.auth.uid
-                   || isAdministrativo();
+        allow read: if (isPersona()
+                        && get(reportDoc(reportId)).data.uid == request.auth.uid)
+                      || canManageReports()
+                      || isSuperadministrador();
 
         allow create: if isPersona()
           && mediaId == 'foto'
-          && get(reportDoc(reportId)).data.uid == request.auth.uid;
+          && getAfter(reportDoc(reportId)).data.uid == request.auth.uid
+          && getAfter(reportDoc(reportId)).data.tieneFoto == true // T2/6.2 getAfter x2 sobre el MISMO reportDoc (uid + tieneFoto) = 2 accesos.
+          && (
+               // Formato nuevo: la imagen vive en Firebase Storage y el
+               // documento solo guarda ruta/URL/tamaño (no consume el límite
+               // de 1 MB de Firestore).
+               (request.resource.data.storagePath is string
+                && request.resource.data.storagePath.size() > 0
+                && request.resource.data.downloadUrl is string
+                && request.resource.data.downloadUrl.size() > 0)
+               // Compatibilidad con imágenes antiguas en Base64.
+               || (request.resource.data.base64 is string
+                   && request.resource.data.base64.size() <= 939520)
+             )
+          && request.resource.data.tamanoBytes is int
+          && request.resource.data.tamanoBytes <= 2097152
+          && request.resource.data.mimeType in ["image/jpeg", "image/png"]; // accesos: isPersona (user x2) + getAfter x2 = 4 <= 10.
+
+        // Evidencia de la solución: la sube el administrativo o el encargado de
+        // mantenimiento asignado dentro de la transacción que deja el reporte
+        // en `Solucionado`.
+        allow create: if canManageReports()
+          && mediaId == 'solucion'
+          && getAfter(reportDoc(reportId)).data.estado == 'Solucionado'
+          && getAfter(reportDoc(reportId)).data.tieneEvidenciaSolucion == true
+          && (isAdministrativo()
+              || getAfter(reportDoc(reportId)).data.get('asignadoA', '') == request.auth.uid)
+          && (
+               (request.resource.data.storagePath is string
+                && request.resource.data.storagePath.size() > 0
+                && request.resource.data.downloadUrl is string
+                && request.resource.data.downloadUrl.size() > 0)
+               || (request.resource.data.base64 is string
+                   && request.resource.data.base64.size() <= 939520)
+             )
+          && request.resource.data.tamanoBytes is int
+          && request.resource.data.tamanoBytes <= 2097152
+          && request.resource.data.mimeType in ["image/jpeg", "image/png"];
 
         allow update, delete: if false;
       }
@@ -158,16 +364,21 @@ service cloud.firestore {
     match /notifications/{notifId} {
       allow read: if isAuthenticated()
         && (resource.data.uidDestino == request.auth.uid
-            || (isAdministrativo() && resource.data.destinoRol == 'administrativo'));
+            || (canManageReports()
+                && resource.data.destinoRol == 'administrativo')
+            || (isSuperadministrador()
+                && resource.data.destinoRol in ['administrativo', 'superadministrador']));
 
       allow create: if isAuthenticated()
         && ((request.resource.data.uidDestino != null ? 1 : 0)
             + (request.resource.data.destinoRol != null ? 1 : 0) == 1)
         && request.resource.data.keys().hasOnly(
              ['tipo', 'titulo', 'mensaje', 'reportId', 'evento', 'estadoNuevo',
-              'uidDestino', 'destinoRol', 'autorUid', 'creadoEn'])
+              'uidDestino', 'destinoRol', 'autorUid', 'fallaId', 'creadoEn'])
         && request.resource.data.tipo in ['reporte', 'administrativo', 'sistema']
         && (
+             // Reporte creado por el estudiante: va al buzón compartido de
+             // administrativos y mantenimiento.
              (isPersona()
                && request.resource.data.destinoRol == 'administrativo'
                && request.resource.data.evento == 'creado'
@@ -179,7 +390,7 @@ service cloud.firestore {
                && getAfter(reportDoc(request.resource.data.reportId)).data.uid == request.auth.uid
                && getAfter(reportDoc(request.resource.data.reportId)).data.estado
                   == eventToEstado(request.resource.data.evento))
-          || (isAdministrativo()
+          || (canManageReports()
                && request.resource.data.destinoRol == null
                && request.resource.data.evento in ['en_revision', 'en_proceso', 'solucionado', 'rechazado']
                && notifId == request.resource.data.reportId + '_' + request.resource.data.evento
@@ -190,11 +401,51 @@ service cloud.firestore {
                   != getAfter(reportDoc(request.resource.data.reportId)).data.estado
                && getAfter(reportDoc(request.resource.data.reportId)).data.estado
                   == eventToEstado(request.resource.data.evento))
-          || (isAdministrativo()
+          || (canManageReports()
                && request.resource.data.destinoRol == 'administrativo'
                && request.resource.data.reportId == null
                && request.resource.data.evento == null)
+          || (isPersona()
+               && request.resource.data.destinoRol == 'superadministrador'
+               && request.resource.data.tipo == 'sistema'
+               && request.resource.data.fallaId != null
+               && notifId == request.resource.data.fallaId + '_falla'
+               && request.resource.data.autorUid == request.auth.uid
+               && request.resource.data.uidDestino == null
+               && request.resource.data.evento == null
+               && request.resource.data.reportId == null
+               && !exists(/databases/$(database)/documents/fallas_app/$(request.resource.data.fallaId))
+               && getAfter(/databases/$(database)/documents/fallas_app/$(request.resource.data.fallaId)).data.uid == request.auth.uid)
         );
+
+      allow update, delete: if false;
+    }
+
+    // ============ FALLAS DE LA APP (buzón sin estados) ============
+    match /fallas_app/{fallaId} {
+      // Solo el superadministrador revisa las fallas de la app.
+      allow read: if isSuperadministrador();
+
+      allow create: if isActivo()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.correo == request.auth.token.email
+        && request.resource.data.mensaje is string
+        && request.resource.data.mensaje.size() > 0
+        && request.resource.data.keys().hasOnly(
+             ['uid', 'correo', 'mensaje', 'pantalla', 'creadoEn',
+              'plataforma', 'sistemaOperativo', 'dispositivo', 'versionApp'])
+        && (!('plataforma' in request.resource.data)
+            || (request.resource.data.plataforma is string
+                && request.resource.data.plataforma.size() <= 80))
+        && (!('sistemaOperativo' in request.resource.data)
+            || (request.resource.data.sistemaOperativo is string
+                && request.resource.data.sistemaOperativo.size() <= 80))
+        && (!('dispositivo' in request.resource.data)
+            || (request.resource.data.dispositivo is string
+                && request.resource.data.dispositivo.size() <= 80))
+        && (!('versionApp' in request.resource.data)
+            || (request.resource.data.versionApp is string
+                && request.resource.data.versionApp.size() <= 80));
 
       allow update, delete: if false;
     }

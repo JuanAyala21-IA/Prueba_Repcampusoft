@@ -8,7 +8,9 @@ abstract final class Validators {
   }
 
   static String? requerido(String? valor) {
-    return (valor == null || valor.trim().isEmpty) ? 'Este campo es obligatorio' : null;
+    return (valor == null || valor.trim().isEmpty)
+        ? 'Este campo es obligatorio'
+        : null;
   }
 
   static String? contrasena(String? valor) {
@@ -19,7 +21,10 @@ abstract final class Validators {
   }
 
   /// Valida que [valor] (confirmación) coincida con [campo] (contraseña).
-  static String? confirmarContrasena({required String? campo, required String? valor}) {
+  static String? confirmarContrasena({
+    required String? campo,
+    required String? valor,
+  }) {
     final String texto = valor ?? '';
     if (texto.isEmpty) return 'Confirma tu contraseña';
     if (texto != campo) return 'Las contraseñas no coinciden';

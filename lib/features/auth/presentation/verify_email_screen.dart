@@ -7,10 +7,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/results.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/uts_header.dart';
-import '../data/providers/auth_providers.dart';
-import '../domain/registro_intentado.dart';
 import '../domain/rol_enum.dart';
-import 'auth_widgets.dart';
 
 /// Pantalla intermedia del gate §5.3: correo autenticado pero sin verificar.
 /// "Ya verifiqué" recarga la sesión y, con el correo confirmado, crea el
@@ -28,21 +25,27 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
   Future<void> _reenviar() async {
     setState(() => _enviando = true);
-    final String? error =
-        await ref.read(sesionProvider.notifier).reenviarCorreoVerificacion();
+    final String? error = await ref
+        .read(sesionProvider.notifier)
+        .reenviarCorreoVerificacion();
     if (!mounted) return;
     setState(() => _enviando = false);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(error ?? 'Correo de verificación reenviado. Revisa tu bandeja de entrada.'),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          error ??
+              'Correo de verificación reenviado. Revisa tu bandeja de entrada.',
+        ),
+      ),
+    );
   }
 
   Future<void> _yaVerifique() async {
     FocusScope.of(context).unfocus();
-    final RegistroIntentado? intento = ref.read(registroIntentadoProvider);
     setState(() => _verificando = true);
-    final Result<RolEnum?> resultado =
-        await ref.read(sesionProvider.notifier).completarVerificacion();
+    final Result<RolEnum?> resultado = await ref
+        .read(sesionProvider.notifier)
+        .completarVerificacion();
     if (!mounted) return;
     setState(() => _verificando = false);
     if (resultado is Failure<RolEnum?>) {
@@ -52,11 +55,13 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     }
     final RolEnum? rol = (resultado as Success<RolEnum?>).value;
     if (rol != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          'Correo verificado. ${avisoRolAsignado(intentado: intento?.rolIntentado, asignado: rol)}',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Correo verificado. Tu rol asignado es: ${rol.etiqueta}.',
+          ),
         ),
-      ));
+      );
     }
   }
 
@@ -69,9 +74,16 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-              const UtsHeader(titulo: 'Verifica tu correo', mostrarRetroceso: false),
+              const UtsHeader(
+                titulo: 'Verifica tu correo',
+                mostrarRetroceso: false,
+              ),
               const SizedBox(height: 30),
-              const Icon(Icons.mark_email_read_outlined, size: 72, color: AppColors.utsGreen),
+              const Icon(
+                Icons.mark_email_read_outlined,
+                size: 72,
+                color: AppColors.utsGreen,
+              ),
               const SizedBox(height: 20),
               Text(
                 'Tu cuenta aún no verifica el correo institucional.\n'
@@ -95,11 +107,14 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               const SizedBox(height: 12),
               TextButton(
                 onPressed: _enviando ? null : _reenviar,
-                child: Text(_enviando ? 'Reenviando…' : 'Reenviar correo de verificación'),
+                child: Text(
+                  _enviando ? 'Reenviando…' : 'Reenviar correo de verificación',
+                ),
               ),
               const SizedBox(height: 8),
               TextButton(
-                onPressed: () => ref.read(sesionProvider.notifier).cerrarSesion(),
+                onPressed: () =>
+                    ref.read(sesionProvider.notifier).cerrarSesion(),
                 child: const Text('Cerrar sesión'),
               ),
             ],

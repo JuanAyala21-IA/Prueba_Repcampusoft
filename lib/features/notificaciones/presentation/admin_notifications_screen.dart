@@ -1,94 +1,275 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/app_router.dart';
+import '../../../core/routes/session_provider.dart';
 import '../../../shared/widgets/bell_badge.dart';
+import '../../../shared/widgets/curved_green_background.dart';
 import '../../../shared/widgets/notification_card.dart';
 import '../../../shared/widgets/uts_header.dart';
+import '../domain/notificacion.dart';
+import '../data/providers/notificacion_providers.dart';
 
-/// Pantalla 13: Notificaciones Área Encargada (datos simulados).
-class AdminNotificationsScreen extends StatefulWidget {
+/// Pantalla 13: Notificaciones Área Encargada (stream real desde Firestore).
+///
+/// El filtrado por rol vive en `notificacionesAdminProvider`: mantenimiento y
+/// administrativo solo ven reportes de estudiantes; el superadministrador ve
+/// reportes de estudiantes y fallas de la app.
+class AdminNotificationsScreen extends ConsumerWidget {
   const AdminNotificationsScreen({super.key});
 
   @override
-  State<AdminNotificationsScreen> createState() => _AdminNotificationsScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final Sesion sesion = ref.watch(sesionProvider);
+    final AsyncValue<List<Notificacion>> asyncNotificaciones = ref.watch(
+      notificacionesAdminProvider,
+    );
+    final AsyncValue<int> asyncContador = ref.watch(
+      contadorNoLeidasAdminProvider,
+    );
 
-class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
-  String _filtro = 'Todas';
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              const UtsHeader(
-                titulo: 'Notificaciones',
-                subtitulo: 'Área Encargada',
-                accion: BellBadge(conteo: 3),
-              ),
-              const SizedBox(height: 8),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _chip('Todas'),
-                    _chip('Reportes'),
-                    _chip('Administrativo'),
-                    _chip('Sistema'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              NotificationCard(
-                titulo: 'Nuevo reporte de daño',
-                mensaje: 'El estudiante Carlos Perez reportó una silla dañada en el salon 402A',
-                fecha: '08/09/2026 - 10:24 a.m.',
-                icono: Icons.person_outline,
-                onTap: () => context.go(AppRoutes.gestionReporte),
-              ),
-              const SizedBox(height: 12),
-              NotificationCard(
-                titulo: 'Reporte en proceso',
-                mensaje: 'El reporte #024 esta siendo revisado por el areá de mantenimiento.',
-                fecha: '08/09/2026 - 9:15 a.m.',
-                icono: Icons.build_outlined,
-                onTap: () => context.go(AppRoutes.gestionReporte),
-              ),
-              const SizedBox(height: 12),
-              NotificationCard(
-                titulo: 'Reporte Solucionado',
-                mensaje: 'El daño en el salon 204A ha sido solucionado.',
-                fecha: '07/09/2026 - 4:32 p.m.',
-                icono: Icons.check_circle_outline,
-                onTap: () => context.go(AppRoutes.gestionReporte),
-              ),
-              const SizedBox(height: 12),
-              NotificationCard(
-                titulo: 'Aviso Administrativo',
-                mensaje: 'Se realizara mantenimiento en el salon 204A el proximo viernes',
-                fecha: '03/09/2026 - 2:45 p.m.',
-                icono: Icons.campaign_outlined,
-              ),
-            ],
+      body: CurvedGreenBackground(
+        child: SafeArea(
+          child: asyncNotificaciones.when(
+            loading: () => const _CargandoNotificaciones(),
+            error: (error, _) => _ErrorCarga(mensaje: error.toString()),
+            data: (notificaciones) {
+              final int conteoNoLeidas = asyncContador.maybeWhen(
+                data: (value) => value,
+                orElse: () => 0,
+              );
+
+              return Column(
+                children: [
+                  UtsHeader(
+                    titulo: 'Notificaciones',
+                    mostrarLogo: false,
+                    accion: BellBadge(conteo: conteoNoLeidas),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: notificaciones.isEmpty
+                        ? _ListaVacia(
+                            esSuperadministrador: sesion.esSuperadministrador,
+                          )
+                        : _ListaNotificaciones(notificaciones: notificaciones),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _chip(String texto) {
-    final bool activo = _filtro == texto;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(texto),
-        selected: activo,
-        onSelected: (_) => setState(() => _filtro = texto),
+class _CargandoNotificaciones extends StatelessWidget {
+  const _CargandoNotificaciones();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const UtsHeader(titulo: 'Notificaciones', mostrarLogo: false),
+        const Expanded(child: Center(child: CircularProgressIndicator())),
+      ],
+    );
+  }
+}
+
+class _ErrorCarga extends StatelessWidget {
+  const _ErrorCarga({required this.mensaje});
+
+  final String mensaje;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const UtsHeader(titulo: 'Notificaciones', mostrarLogo: false),
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No se pudieron cargar las notificaciones',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    mensaje,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ListaVacia extends StatelessWidget {
+  const _ListaVacia({required this.esSuperadministrador});
+
+  final bool esSuperadministrador;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.notifications_none_outlined,
+              size: 64,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No hay notificaciones',
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              esSuperadministrador
+                  ? 'Aquí verás los reportes de los estudiantes y las fallas de la app.'
+                  : 'Aquí verás los reportes que hacen los estudiantes.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
+  }
+}
+
+class _ListaNotificaciones extends ConsumerWidget {
+  const _ListaNotificaciones({required this.notificaciones});
+
+  final List<Notificacion> notificaciones;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: List.generate(notificaciones.length * 2 - 1, (index) {
+          if (index.isOdd) {
+            return const SizedBox(height: 12);
+          }
+          final notificacion = notificaciones[index ~/ 2];
+          return _NotificacionItem(notificacion: notificacion);
+        }),
+      ),
+    );
+  }
+}
+
+class _NotificacionItem extends ConsumerWidget {
+  const _NotificacionItem({required this.notificacion});
+
+  final Notificacion notificacion;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return NotificationCard(
+      titulo: notificacion.titulo,
+      mensaje: notificacion.mensaje,
+      fecha: _formatFecha(notificacion.creadoEn),
+      icono: _iconoPorEvento(notificacion.evento, notificacion.tipo),
+      leida: notificacion.leida,
+      onTap: () async {
+        final uid = ref.read(sesionProvider).uid!;
+        // La navegación no debe depender de poder marcar como leída: si la
+        // escritura falla, la notificación igual debe abrir su detalle.
+        try {
+          await ref
+              .read(notificacionRepositoryProvider)
+              .marcarLeida(uid, notificacion.id);
+        } catch (_) {
+          // Se ignora: el detalle se abre de todos modos.
+        }
+
+        if (!context.mounted) return;
+        if (notificacion.reportId != null) {
+          context.push(
+            '${AppRoutes.gestionReporte}?reportId=${notificacion.reportId}',
+          );
+        } else if (notificacion.fallaId != null ||
+            notificacion.tipo == NotificacionTipo.sistema) {
+          context.push(AppRoutes.fallasApp);
+        }
+      },
+    );
+  }
+
+  String _formatFecha(Timestamp timestamp) {
+    final date = timestamp.toDate();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final notifDate = DateTime(date.year, date.month, date.day);
+
+    if (notifDate == today) {
+      return 'Hoy, ${_formatHour(date)}';
+    } else if (notifDate == yesterday) {
+      return 'Ayer, ${_formatHour(date)}';
+    } else {
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    }
+  }
+
+  String _formatHour(DateTime date) {
+    final hour = date.hour;
+    final minute = date.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'p.m.' : 'a.m.';
+    final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+    return '$displayHour:$minute $period';
+  }
+
+  IconData _iconoPorEvento(NotificacionEvento? evento, NotificacionTipo tipo) {
+    if (evento != null) {
+      switch (evento) {
+        case NotificacionEvento.creado:
+          return Icons.description_outlined;
+        case NotificacionEvento.enRevision:
+          return Icons.search_rounded;
+        case NotificacionEvento.enProceso:
+          return Icons.build_outlined;
+        case NotificacionEvento.solucionado:
+          return Icons.check_circle_outline;
+        case NotificacionEvento.rechazado:
+          return Icons.warning_amber_rounded;
+      }
+    }
+    switch (tipo) {
+      case NotificacionTipo.administrativo:
+        return Icons.campaign_outlined;
+      case NotificacionTipo.sistema:
+        return Icons.info_outline;
+      case NotificacionTipo.reporte:
+        return Icons.notifications_outlined;
+    }
   }
 }

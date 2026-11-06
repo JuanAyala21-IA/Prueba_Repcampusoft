@@ -6,17 +6,18 @@ import 'app_typography.dart';
 /// Tema Material 3 fiel al Design System de pantallas.md.
 abstract final class AppTheme {
   static ThemeData light() {
-    final ColorScheme colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.utsGreen,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: AppColors.utsGreen,
-      onPrimary: AppColors.textPrimary,
-      secondary: AppColors.utsGreen,
-      surface: AppColors.background,
-      onSurface: AppColors.textPrimary,
-      outline: AppColors.divider,
-    );
+    final ColorScheme colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.utsGreen,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: AppColors.utsGreen,
+          onPrimary: AppColors.textPrimary,
+          secondary: AppColors.utsGreen,
+          surface: AppColors.background,
+          onSurface: AppColors.textPrimary,
+          outline: AppColors.divider,
+        );
 
     return ThemeData(
       useMaterial3: true,
@@ -52,7 +53,9 @@ abstract final class AppTheme {
           minimumSize: const Size.fromHeight(54),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           textStyle: AppTypography.textTheme.labelLarge,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -66,7 +69,10 @@ abstract final class AppTheme {
         filled: true,
         fillColor: AppColors.surface,
         hintStyle: GoogleFontTextStyle.placeholder,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
         prefixIconColor: AppColors.textSecondary,
         suffixIconColor: AppColors.textSecondary,
         border: const OutlineInputBorder(
@@ -109,15 +115,13 @@ abstract final class AppTheme {
 
 /// Estilos de texto no tipados reutilizables dentro del tema.
 abstract final class GoogleFontTextStyle {
-  static TextStyle? get placeholder => const TextStyle(
-        color: AppColors.textSecondary,
-        fontSize: 14,
-      );
+  static TextStyle? get placeholder =>
+      const TextStyle(color: AppColors.textSecondary, fontSize: 14);
 
   static TextStyle? get underlinedLink => const TextStyle(
-        color: AppColors.textSecondary,
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        decoration: TextDecoration.underline,
-      );
+    color: AppColors.textSecondary,
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+    decoration: TextDecoration.underline,
+  );
 }
