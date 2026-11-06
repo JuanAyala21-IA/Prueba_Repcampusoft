@@ -69,16 +69,25 @@ La app quedó configurada también para iOS con el mismo bundle
 
 ### Pasos manuales en macOS/Xcode (una sola vez)
 
-> El proyecto usa **Swift Package Manager** para la mayoría de plugins, pero
-> `flutter_local_notifications` todavía se integra con **CocoaPods**. Instala
-> CocoaPods (`brew install cocoapods`): Flutter generará `ios/Podfile` y
-> `ios/Runner.xcworkspace` automáticamente al preparar la compilación.
+> El proyecto compila con **CocoaPods**. Aunque varios plugins soportan Swift
+> Package Manager, no se puede usar SPM con las versiones actuales de Firebase:
+> `firebase_auth` 6.7.0 fija `firebase-ios-sdk` 12.19.0 y `firebase_core`,
+> `firebase_storage` y `firebase_messaging` fijan 12.19.3. SPM exige versiones
+> exactas y falla al resolver (`Dependencies could not be resolved because
+> 'firebase_auth-6.7.0' depends on 'firebase-ios-sdk' 12.19.0 and
+> 'firebase_storage-13.6.1' depends on 'firebase-ios-sdk' 12.19.3`).
+> Con CocoaPods todos los plugins toman la versión de `firebase_core`
+> (12.19.3) y la resolución es correcta. Además
+> `flutter_local_notifications` solo se integra con CocoaPods.
+>
+> Instala CocoaPods (`brew install cocoapods`): Flutter generará `ios/Podfile`
+> y `ios/Runner.xcworkspace` automáticamente al preparar la compilación.
 
-1. Preparar las dependencias nativas antes de abrir Xcode (genera Podfile,
-   Pods y el paquete Swift):
+1. Desactivar SPM y preparar las dependencias nativas antes de abrir Xcode
+   (genera Podfile, Pods y el paquete Swift vacío):
 
    ```bash
-   flutter config --enable-swift-package-manager
+   flutter config --no-enable-swift-package-manager
    flutter pub get
    flutter build ios --debug --no-codesign
    ```
@@ -98,7 +107,7 @@ La app quedó configurada también para iOS con el mismo bundle
    flutter run --release -d <device-id>
    ```
 
-5. Verificar: permiso de notificaciones, recepción con la app cerrada, en
+6. Verificar: permiso de notificaciones, recepción con la app cerrada, en
    segundo plano y en primer plano (sin duplicados), y toque de la notificación
    hacia el reporte o *Fallas de la app*.
 
