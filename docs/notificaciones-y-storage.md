@@ -69,20 +69,32 @@ La app quedó configurada también para iOS con el mismo bundle
 
 ### Pasos manuales en macOS/Xcode (una sola vez)
 
-1. Abrir `ios/Runner.xcworkspace` (o `Runner.xcodeproj`) en Xcode.
-2. En *Signing & Capabilities* del target **Runner**:
+> El proyecto usa **Swift Package Manager** para la mayoría de plugins, pero
+> `flutter_local_notifications` todavía se integra con **CocoaPods**. Instala
+> CocoaPods (`brew install cocoapods`): Flutter generará `ios/Podfile` y
+> `ios/Runner.xcworkspace` automáticamente al preparar la compilación.
+
+1. Preparar las dependencias nativas antes de abrir Xcode (genera Podfile,
+   Pods y el paquete Swift):
+
+   ```bash
+   flutter config --enable-swift-package-manager
+   flutter pub get
+   flutter build ios --debug --no-codesign
+   ```
+
+2. Abrir `ios/Runner.xcworkspace` en Xcode (se crea al ejecutar `pod install`;
+   no abras solo el `.xcodeproj`).
+3. En *Signing & Capabilities* del target **Runner**:
    - Elegir el *Team* y activar **Automatically manage signing**.
    - Verificar que **Push Notifications** aparece habilitado (el entitlements ya
      lo declara; Xcode lo refleja al abrir el proyecto).
-3. En <https://console.firebase.google.com/project/repcampusoft/settings/cloudmessaging>
+4. En <https://console.firebase.google.com/project/repcampusoft/settings/cloudmessaging>
    subir la **APNs Authentication Key** (`.p8`) con su Key ID y Team ID de
    Apple Developer.
-4. Compilar y probar en un iPhone físico (el simulador no recibe push APNs):
+5. Compilar y probar en un iPhone físico (el simulador no recibe push APNs):
 
    ```bash
-   flutter pub get
-   flutter analyze
-   flutter test
    flutter run --release -d <device-id>
    ```
 
