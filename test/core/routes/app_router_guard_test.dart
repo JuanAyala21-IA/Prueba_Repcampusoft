@@ -120,6 +120,7 @@ void main() {
         AppRoutes.notificacionesAdmin,
         AppRoutes.gestionUsuarios,
         AppRoutes.crearUsuario,
+        AppRoutes.exportarReportes,
         AppRoutes.fallasApp,
       ]) {
         expect(
@@ -156,6 +157,7 @@ void main() {
         for (final ruta in [
           AppRoutes.gestionUsuarios,
           AppRoutes.crearUsuario,
+          AppRoutes.exportarReportes,
           AppRoutes.fallasApp,
           AppRoutes.inicioEstudiante,
           AppRoutes.reportarDanos,
@@ -183,6 +185,7 @@ void main() {
         AppRoutes.fallasApp,
         AppRoutes.gestionUsuarios,
         AppRoutes.crearUsuario,
+        AppRoutes.exportarReportes,
         AppRoutes.editarPerfil,
         AppRoutes.cambiarContrasena,
         AppRoutes.reportarFalla,

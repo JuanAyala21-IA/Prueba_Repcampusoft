@@ -174,6 +174,11 @@ class AdminHomeScreen extends ConsumerWidget {
                           titulo: 'Fallas de la app',
                           onTap: () => context.push(AppRoutes.fallasApp),
                         ),
+                        DashboardTile(
+                          icono: Icons.file_download_outlined,
+                          titulo: 'Descargar reportes (CSV)',
+                          onTap: () => context.push(AppRoutes.exportarReportes),
+                        ),
                       ],
                     ],
                   ),

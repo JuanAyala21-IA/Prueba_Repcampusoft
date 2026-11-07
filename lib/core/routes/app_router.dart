@@ -24,6 +24,7 @@ import '../../features/notificaciones/presentation/student_notifications_screen.
 import '../../features/perfil/presentation/admin_profile_screen.dart';
 import '../../features/perfil/presentation/edit_profile_screen.dart';
 import '../../features/perfil/presentation/student_profile_screen.dart';
+import '../../features/reportes/presentation/export_reports_screen.dart';
 import '../../features/reportes/presentation/my_reports_screen.dart';
 import '../../features/reportes/presentation/report_damage_screen.dart';
 import '../../features/reportes/presentation/report_detail_screen.dart';
@@ -70,6 +71,7 @@ abstract final class AppRoutes {
   // Superadministrador.
   static const String gestionUsuarios = '/gestion-usuarios';
   static const String crearUsuario = '/crear-usuario';
+  static const String exportarReportes = '/exportar-reportes';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -174,6 +176,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.crearUsuario,
         builder: (_, _) => const CreateUserScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.exportarReportes,
+        builder: (_, _) => const ExportReportsScreen(),
       ),
     ],
   );
@@ -284,4 +290,5 @@ const Set<String> rutasSuperadministrador = {
   AppRoutes.fallasApp,
   AppRoutes.gestionUsuarios,
   AppRoutes.crearUsuario,
+  AppRoutes.exportarReportes,
 };

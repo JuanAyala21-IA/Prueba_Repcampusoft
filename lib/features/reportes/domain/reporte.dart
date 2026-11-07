@@ -99,6 +99,8 @@ class Reporte {
     required this.estado,
     required this.tieneFoto,
     required this.creadoEn,
+    this.actualizadoEn,
+    this.observacionAdmin,
     this.encargadoUid,
     this.encargadoNombre,
     this.asignadoA,
@@ -129,6 +131,14 @@ class Reporte {
   /// `tieneFoto == true` si existe `reports/{id}/media/foto` (§2.4/RNF-06).
   final bool tieneFoto;
   final DateTime creadoEn;
+
+  /// Última modificación del reporte (`actualizadoEn` en Firestore). También
+  /// marca la fecha de solución cuando [estado] es `Solucionado`.
+  final DateTime? actualizadoEn;
+
+  /// Observación escrita por el funcionario al gestionar el reporte (por
+  /// ejemplo, el motivo del rechazo).
+  final String? observacionAdmin;
 
   /// Funcionario (administrativo o mantenimiento) que solucionó el daño.
   /// Se registra al pasar el reporte a `Solucionado`.

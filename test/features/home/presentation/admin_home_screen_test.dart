@@ -47,11 +47,19 @@ GoRouter createRouter(String initialRoute) {
         path: AppRoutes.notificacionesAdmin,
         builder: (_, _) => const Scaffold(body: Text('NOTIF_ADMIN')),
       ),
+      GoRoute(
+        path: AppRoutes.exportarReportes,
+        builder: (_, _) => const Scaffold(body: Text('EXPORTAR_REPORTES')),
+      ),
     ],
   );
 }
 
-ProviderScope wrapWithProviders(GoRouter router, FakeAuthRepository fakeAuth) {
+ProviderScope wrapWithProviders(
+  GoRouter router,
+  FakeAuthRepository fakeAuth, {
+  RolEnum rol = RolEnum.administrativo,
+}) {
   return ProviderScope(
     overrides: [
       authRepositoryProvider.overrideWithValue(fakeAuth),
@@ -60,10 +68,10 @@ ProviderScope wrapWithProviders(GoRouter router, FakeAuthRepository fakeAuth) {
       ),
       sesionProvider.overrideWith(
         () => _FakeSesionController(
-          const Sesion.rolAplicado(
+          Sesion.rolAplicado(
             uid: 'admin-uid',
             correo: 'admin@uts.edu.co',
-            rol: RolEnum.administrativo,
+            rol: rol,
           ),
         ),
       ),
@@ -148,6 +156,40 @@ void main() {
       await tester.pump();
 
       expect(find.text('NOTIF_ADMIN'), findsOneWidget);
+    });
+
+    testWidgets('administrativo no ve la opción de descargar reportes', (
+      tester,
+    ) async {
+      final router = createRouter(AppRoutes.inicioAdmin);
+      await tester.pumpWidget(wrapWithProviders(router, fakeAuth));
+      await tester.pump();
+
+      expect(find.text('Descargar reportes (CSV)'), findsNothing);
+      expect(find.byType(DashboardTile), findsNWidgets(3));
+    });
+
+    testWidgets('superadministrador ve Descargar reportes y navega', (
+      tester,
+    ) async {
+      final router = createRouter(AppRoutes.inicioAdmin);
+      await tester.pumpWidget(
+        wrapWithProviders(router, fakeAuth, rol: RolEnum.superadministrador),
+      );
+      await tester.pump();
+
+      expect(find.byType(DashboardTile), findsNWidgets(6));
+      final finder = find.widgetWithText(
+        DashboardTile,
+        'Descargar reportes (CSV)',
+      );
+      expect(finder, findsOneWidget);
+      await tester.ensureVisible(finder);
+      await tester.pump();
+      await tester.tap(finder, warnIfMissed: false);
+      await tester.pump();
+
+      expect(find.text('EXPORTAR_REPORTES'), findsOneWidget);
     });
   });
 }

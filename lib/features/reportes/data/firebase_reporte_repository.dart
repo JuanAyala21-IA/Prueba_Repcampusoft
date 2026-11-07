@@ -584,6 +584,8 @@ class FirebaseReporteRepository implements ReporteRepository {
       estado: EstadoReporte.fromValor(data['estado'] as String),
       tieneFoto: data['tieneFoto'] as bool? ?? false,
       creadoEn: (data['creadoEn'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      actualizadoEn: (data['actualizadoEn'] as Timestamp?)?.toDate(),
+      observacionAdmin: data['observacionAdmin'] as String?,
       encargadoUid: data['encargadoUid'] as String?,
       encargadoNombre: data['encargadoNombre'] as String?,
       asignadoA: data['asignadoA'] as String?,
