@@ -178,26 +178,22 @@ service cloud.firestore {
     // ============ CATÁLOGOS DE REPORTES ============
     match /catalogos_edificios/{catalogoId} {
       allow read: if isAuthenticated();
-      allow create, update: if canManageCatalogos();
-      allow delete: if false;
+      allow create, update, delete: if canManageCatalogos();
     }
 
     match /catalogos_sitios/{catalogoId} {
       allow read: if isAuthenticated();
-      allow create, update: if canManageCatalogos();
-      allow delete: if false;
+      allow create, update, delete: if canManageCatalogos();
     }
 
     match /catalogos_danos/{catalogoId} {
       allow read: if isAuthenticated();
-      allow create, update: if canManageCatalogos();
-      allow delete: if false;
+      allow create, update, delete: if canManageCatalogos();
     }
 
     match /catalogos_zonas/{catalogoId} {
       allow read: if isAuthenticated();
-      allow create, update: if canManageCatalogos();
-      allow delete: if false;
+      allow create, update, delete: if canManageCatalogos();
     }
 
     // ============ REPORTES ============

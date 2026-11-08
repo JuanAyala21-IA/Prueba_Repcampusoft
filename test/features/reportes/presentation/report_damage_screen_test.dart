@@ -315,9 +315,7 @@ void main() {
       expect(find.text('Campo obligatorio'), findsOneWidget);
     });
 
-    testWidgets('8a. Baño muestra los daños globales del catálogo', (
-      tester,
-    ) async {
+    testWidgets('8a. Baño muestra daños de baño y no de aula', (tester) async {
       await tester.pumpWidget(
         createTestWidget(repo: FakeRepo(), sonda: FakeSonda()),
       );
@@ -333,12 +331,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Silla dañada'), findsWidgets);
+      expect(find.text('Sanitario dañado'), findsWidgets);
+      expect(find.text('Silla dañada'), findsNothing);
     });
 
-    testWidgets('8b. Aula muestra los daños globales del catálogo', (
-      tester,
-    ) async {
+    testWidgets('8b. Aula muestra daños de aula y no de baño', (tester) async {
       await tester.pumpWidget(
         createTestWidget(repo: FakeRepo(), sonda: FakeSonda()),
       );
@@ -355,6 +352,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Silla dañada'), findsWidgets);
+      expect(find.text('Sanitario dañado'), findsNothing);
     });
 
     testWidgets('9. Repo devuelve Failure: muestra SnackBar y apaga cargando', (

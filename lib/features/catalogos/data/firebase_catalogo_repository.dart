@@ -83,9 +83,12 @@ class FirebaseCatalogoRepository implements CatalogoRepository {
             QueryDocumentSnapshot<Map<String, dynamic>> doc,
           ) {
             final Map<String, dynamic> data = doc.data();
+            final List<dynamic> sitios =
+                (data['sitios'] as List<dynamic>?) ?? const <dynamic>[];
             return TipoDanoCatalogo(
               id: doc.id,
               nombre: data['nombre'] as String? ?? doc.id,
+              sitios: sitios.map((dynamic s) => s.toString()).toList(),
               activo: data['activo'] as bool? ?? true,
               orden: (data['orden'] as num?)?.toInt() ?? 0,
             );
@@ -142,6 +145,7 @@ class FirebaseCatalogoRepository implements CatalogoRepository {
   Future<Result<void>> guardarTipoDano(TipoDanoCatalogo tipo) {
     return _guardar(_colDanos, tipo.id, <String, Object?>{
       'nombre': tipo.nombre.trim(),
+      'sitios': tipo.sitios,
       'activo': tipo.activo,
       'orden': tipo.orden,
     });
@@ -154,6 +158,28 @@ class FirebaseCatalogoRepository implements CatalogoRepository {
       'activo': zona.activo,
       'orden': zona.orden,
     });
+  }
+
+  @override
+  Future<Result<void>> eliminarEdificio(String id) =>
+      _eliminar(_colEdificios, id);
+
+  @override
+  Future<Result<void>> eliminarSitio(String id) => _eliminar(_colSitios, id);
+
+  @override
+  Future<Result<void>> eliminarTipoDano(String id) => _eliminar(_colDanos, id);
+
+  @override
+  Future<Result<void>> eliminarZona(String id) => _eliminar(_colZonas, id);
+
+  Future<Result<void>> _eliminar(String coleccion, String id) async {
+    try {
+      await _col(coleccion).doc(id).delete();
+      return const Success(null);
+    } on FirebaseException catch (e) {
+      return Failure(e.message ?? 'No se pudo eliminar el catálogo.');
+    }
   }
 
   Future<Result<void>> _guardar(
@@ -223,6 +249,7 @@ class FirebaseCatalogoRepository implements CatalogoRepository {
         for (final TipoDanoCatalogo item in tiposDanoPorDefecto()) {
           batch.set(_col(_colDanos).doc(item.id), <String, Object?>{
             'nombre': item.nombre,
+            'sitios': item.sitios,
             'activo': item.activo,
             'orden': item.orden,
             'creadoEn': FieldValue.serverTimestamp(),

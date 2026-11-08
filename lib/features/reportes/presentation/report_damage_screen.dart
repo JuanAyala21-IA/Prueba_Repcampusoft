@@ -444,7 +444,12 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
             .toList();
     final List<String> tiposDano =
         (ref.watch(tiposDanoCatalogoProvider).value ?? tiposDanoPorDefecto())
-            .where((TipoDanoCatalogo t) => t.activo)
+            .where(
+              (TipoDanoCatalogo t) =>
+                  t.activo &&
+                  (t.sitios.isEmpty ||
+                      (_sitio != null && t.sitios.contains(_sitio!.id))),
+            )
             .map((TipoDanoCatalogo t) => t.nombre)
             .toList();
     final List<String> zonas =

@@ -17,11 +17,13 @@ inmediatamente; no hace falta recompilar la app.
 |---|---|
 | **Edificios** | Nombre y lista de pisos. Los pisos se escriben separados por coma. |
 | **Sitios** | Tipos de espacio (aula, baño, laboratorio, etc.). Definen si el formulario pide edificio, piso y referencia. |
-| **Daños** | Tipos de daño disponibles para todos los sitios. |
+| **Daños** | Tipos de daño y los sitios donde aparecen. |
 | **Zonas** | Opciones de zona cuando el sitio es una zona exterior. |
 
-Cada elemento tiene un interruptor para **activarlo o desactivarlo**. Desactivar
-no borra reportes históricos ni elimina el elemento de Firestore.
+Cada elemento tiene un interruptor para **activarlo o desactivarlo** y un botón
+para **eliminarlo** con confirmación. Desactivar no borra reportes históricos.
+Eliminar quita el elemento del catálogo; los reportes anteriores conservan el
+texto que ya tienen guardado.
 
 ## Reglas de los sitios
 
@@ -40,8 +42,10 @@ no borra reportes históricos ni elimina el elemento de Firestore.
 
 ## Tipos de daño
 
-Todos los tipos de daño activos se muestran para cualquier sitio, tal como se
-definió para esta versión. Los tipos nuevos se agregan al final de la lista.
+Todos los tipos de daño activos se muestran únicamente en los sitios que se les
+asignen. Al crear o editar un daño se eligen uno o varios sitios, o **Todos los
+sitios**. Los daños iniciales ya vienen categorizados (por ejemplo, “Sanitario
+dañado” solo en baños y “Silla dañada” en aulas, laboratorios, oficinas, etc.).
 
 ## Edificios y pisos
 

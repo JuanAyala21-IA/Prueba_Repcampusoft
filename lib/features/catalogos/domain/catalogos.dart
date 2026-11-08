@@ -123,19 +123,29 @@ class TipoDanoCatalogo {
   const TipoDanoCatalogo({
     required this.id,
     required this.nombre,
+    this.sitios = const <String>[],
     this.activo = true,
     this.orden = 0,
   });
 
   final String id;
   final String nombre;
+
+  /// IDs de los sitios donde aparece este daño. Vacío significa todos.
+  final List<String> sitios;
   final bool activo;
   final int orden;
 
-  TipoDanoCatalogo copyWith({String? nombre, bool? activo, int? orden}) {
+  TipoDanoCatalogo copyWith({
+    String? nombre,
+    List<String>? sitios,
+    bool? activo,
+    int? orden,
+  }) {
     return TipoDanoCatalogo(
       id: id,
       nombre: nombre ?? this.nombre,
+      sitios: sitios ?? this.sitios,
       activo: activo ?? this.activo,
       orden: orden ?? this.orden,
     );
@@ -219,12 +229,28 @@ List<SitioReporteCatalogo> sitiosPorDefecto() {
 }
 
 List<TipoDanoCatalogo> tiposDanoPorDefecto() {
+  final Map<String, Set<String>> sitiosPorTipo = <String, Set<String>>{
+    for (final String nombre in CatalogoTiposDano.todos()) nombre: <String>{},
+  };
+  for (final String nombre in CatalogoTiposDano.para(TipoEspacio.otro)) {
+    sitiosPorTipo[nombre]?.add(TipoEspacio.otro.slug);
+  }
+  CatalogoTiposDano.mapaPorEspacio.forEach((
+    TipoEspacio sitio,
+    List<String> nombres,
+  ) {
+    for (final String nombre in nombres) {
+      sitiosPorTipo[nombre]?.add(sitio.slug);
+    }
+  });
+
   int orden = 0;
   return CatalogoTiposDano.todos()
       .map(
         (String nombre) => TipoDanoCatalogo(
           id: slugCatalogo(nombre),
           nombre: nombre,
+          sitios: (sitiosPorTipo[nombre] ?? <String>{}).toList()..sort(),
           orden: orden++,
         ),
       )

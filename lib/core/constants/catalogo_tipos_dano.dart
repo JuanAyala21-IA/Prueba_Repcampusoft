@@ -165,6 +165,11 @@ abstract final class CatalogoTiposDano {
     return _porEspacio[tipo] ?? _genericos;
   }
 
+  /// Mapa sitio → daños del catálogo local. Se usa para sembrar la relación
+  /// entre cada tipo de daño y los sitios donde debe aparecer.
+  static Map<TipoEspacio, List<String>> get mapaPorEspacio =>
+      Map<TipoEspacio, List<String>>.unmodifiable(_porEspacio);
+
   /// Lista única de todos los tipos de daño del catálogo local.
   ///
   /// Se usa para sembrar el catálogo dinámico en Firestore, donde los tipos

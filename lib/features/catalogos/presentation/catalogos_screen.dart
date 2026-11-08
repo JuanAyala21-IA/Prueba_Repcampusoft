@@ -138,6 +138,15 @@ class _EdificiosTab extends ConsumerWidget {
                   onMensaje,
                 );
               },
+              onEliminar: () => _confirmarEliminar(
+                context,
+                ref,
+                item.nombre,
+                () => ref
+                    .read(catalogoRepositoryProvider)
+                    .eliminarEdificio(item.id),
+                onMensaje,
+              ),
             ),
           )
           .toList(),
@@ -177,6 +186,14 @@ class _SitiosTab extends ConsumerWidget {
                   onMensaje,
                 );
               },
+              onEliminar: () => _confirmarEliminar(
+                context,
+                ref,
+                item.nombre,
+                () =>
+                    ref.read(catalogoRepositoryProvider).eliminarSitio(item.id),
+                onMensaje,
+              ),
             ),
           )
           .toList(),
@@ -206,47 +223,21 @@ class _DanosTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final List<TipoDanoCatalogo> items =
         ref.watch(tiposDanoCatalogoProvider).value ?? <TipoDanoCatalogo>[];
+    final List<SitioReporteCatalogo> sitios =
+        ref.watch(sitiosCatalogoProvider).value ?? sitiosPorDefecto();
     return _CatalogoTab(
       titulo: 'Tipos de daño',
-      descripcion:
-          'Estos daños están disponibles para todos los sitios del formulario.',
+      descripcion: 'Cada daño se muestra solo en los sitios que le asignes.',
       textoAgregar: 'Agregar tipo de daño',
-      onAgregar: () => _abrirNombre(
-        context,
-        ref,
-        items.map((TipoDanoCatalogo e) => e.nombre).toList(),
-        nombreInicial: null,
-        onGuardar: (String nombre) => ref
-            .read(catalogoRepositoryProvider)
-            .guardarTipoDano(
-              TipoDanoCatalogo(
-                id: _idUnico(
-                  slugCatalogo(nombre),
-                  items.map((TipoDanoCatalogo e) => e.id).toSet(),
-                ),
-                nombre: nombre,
-                orden: items.length,
-              ),
-            ),
-        onMensaje: onMensaje,
-      ),
+      onAgregar: () => _abrirTipoDano(context, ref, items, sitios, null),
       onRecargar: () => ref.invalidate(tiposDanoCatalogoProvider),
       items: items
           .map(
             (TipoDanoCatalogo item) => _CatalogoCard(
               titulo: item.nombre,
-              detalle: 'Disponible en todos los sitios',
+              detalle: _detalleSitios(item, sitios),
               activo: item.activo,
-              onEditar: () => _abrirNombre(
-                context,
-                ref,
-                items.map((TipoDanoCatalogo e) => e.nombre).toList(),
-                nombreInicial: item.nombre,
-                onGuardar: (String nombre) => ref
-                    .read(catalogoRepositoryProvider)
-                    .guardarTipoDano(item.copyWith(nombre: nombre)),
-                onMensaje: onMensaje,
-              ),
+              onEditar: () => _abrirTipoDano(context, ref, items, sitios, item),
               onActivo: (bool activo) {
                 _guardar(
                   ref,
@@ -256,10 +247,31 @@ class _DanosTab extends ConsumerWidget {
                   onMensaje,
                 );
               },
+              onEliminar: () => _confirmarEliminar(
+                context,
+                ref,
+                item.nombre,
+                () => ref
+                    .read(catalogoRepositoryProvider)
+                    .eliminarTipoDano(item.id),
+                onMensaje,
+              ),
             ),
           )
           .toList(),
     );
+  }
+
+  String _detalleSitios(
+    TipoDanoCatalogo item,
+    List<SitioReporteCatalogo> sitios,
+  ) {
+    if (item.sitios.isEmpty) return 'Todos los sitios';
+    final List<String> nombres = sitios
+        .where((SitioReporteCatalogo s) => item.sitios.contains(s.id))
+        .map((SitioReporteCatalogo s) => s.nombre)
+        .toList();
+    return nombres.isEmpty ? 'Sin sitios asignados' : nombres.join(', ');
   }
 }
 
@@ -321,6 +333,14 @@ class _ZonasTab extends ConsumerWidget {
                   onMensaje,
                 );
               },
+              onEliminar: () => _confirmarEliminar(
+                context,
+                ref,
+                item.nombre,
+                () =>
+                    ref.read(catalogoRepositoryProvider).eliminarZona(item.id),
+                onMensaje,
+              ),
             ),
           )
           .toList(),
@@ -399,6 +419,7 @@ class _CatalogoCard extends StatelessWidget {
     required this.activo,
     required this.onEditar,
     required this.onActivo,
+    required this.onEliminar,
   });
 
   final String titulo;
@@ -406,6 +427,7 @@ class _CatalogoCard extends StatelessWidget {
   final bool activo;
   final VoidCallback onEditar;
   final ValueChanged<bool> onActivo;
+  final VoidCallback onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -451,6 +473,11 @@ class _CatalogoCard extends StatelessWidget {
               tooltip: 'Editar',
               onPressed: onEditar,
               icon: const Icon(Icons.edit_outlined, size: 20),
+            ),
+            IconButton(
+              tooltip: 'Eliminar',
+              onPressed: onEliminar,
+              icon: const Icon(Icons.delete_outline, size: 20),
             ),
             Switch.adaptive(value: activo, onChanged: onActivo),
           ],
@@ -517,6 +544,67 @@ Future<void> _abrirSitio(
   final Result<void> r = await ref
       .read(catalogoRepositoryProvider)
       .guardarSitio(resultado);
+  if (r is Failure<void> && context.mounted) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(r.message)));
+  }
+}
+
+Future<void> _confirmarEliminar(
+  BuildContext context,
+  WidgetRef ref,
+  String nombre,
+  Future<Result<void>> Function() accion,
+  void Function(String) onMensaje,
+) async {
+  final bool? confirmar = await showDialog<bool>(
+    context: context,
+    builder: (BuildContext ctx) => AlertDialog(
+      title: const Text('Eliminar del catálogo'),
+      content: Text(
+        '¿Eliminar "$nombre"? Esta acción no se puede deshacer. Los reportes '
+        'anteriores conservarán el texto que ya tienen guardado.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Eliminar'),
+        ),
+      ],
+    ),
+  );
+  if (confirmar != true) return;
+  final Result<void> r = await accion();
+  if (r is Failure<void>) {
+    onMensaje(r.message);
+  } else {
+    ref.invalidate(edificiosCatalogoProvider);
+    ref.invalidate(sitiosCatalogoProvider);
+    ref.invalidate(tiposDanoCatalogoProvider);
+    ref.invalidate(zonasCatalogoProvider);
+    onMensaje('Elemento eliminado del catálogo.');
+  }
+}
+
+Future<void> _abrirTipoDano(
+  BuildContext context,
+  WidgetRef ref,
+  List<TipoDanoCatalogo> items,
+  List<SitioReporteCatalogo> sitios,
+  TipoDanoCatalogo? item,
+) async {
+  final TipoDanoCatalogo? resultado = await showDialog<TipoDanoCatalogo>(
+    context: context,
+    builder: (_) => _TipoDanoDialog(item: item, items: items, sitios: sitios),
+  );
+  if (resultado == null) return;
+  final Result<void> r = await ref
+      .read(catalogoRepositoryProvider)
+      .guardarTipoDano(resultado);
   if (r is Failure<void> && context.mounted) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(r.message)));
@@ -799,6 +887,140 @@ class _SitioDialogState extends State<_SitioDialog> {
                 muestraReferencia: _muestraReferencia,
                 referenciaObligatoria: _referenciaObligatoria,
                 tipoEspecial: _tipoEspecial,
+                activo: widget.item?.activo ?? true,
+                orden: widget.item?.orden ?? widget.items.length,
+              ),
+            );
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+}
+
+class _TipoDanoDialog extends StatefulWidget {
+  const _TipoDanoDialog({
+    required this.item,
+    required this.items,
+    required this.sitios,
+  });
+
+  final TipoDanoCatalogo? item;
+  final List<TipoDanoCatalogo> items;
+  final List<SitioReporteCatalogo> sitios;
+
+  @override
+  State<_TipoDanoDialog> createState() => _TipoDanoDialogState();
+}
+
+class _TipoDanoDialogState extends State<_TipoDanoDialog> {
+  late final TextEditingController _nombre;
+  late bool _todos;
+  late final Set<String> _seleccionados;
+
+  @override
+  void initState() {
+    super.initState();
+    _nombre = TextEditingController(text: widget.item?.nombre ?? '');
+    _todos = widget.item == null
+        ? widget.sitios.isEmpty
+        : widget.item!.sitios.isEmpty;
+    _seleccionados = <String>{...?widget.item?.sitios};
+  }
+
+  @override
+  void dispose() {
+    _nombre.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(
+        widget.item == null ? 'Agregar tipo de daño' : 'Editar tipo de daño',
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nombre,
+              decoration: const InputDecoration(labelText: 'Nombre'),
+            ),
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Todos los sitios'),
+              value: _todos,
+              onChanged: (bool? v) {
+                setState(() {
+                  _todos = v ?? false;
+                  if (!_todos) _seleccionados.clear();
+                });
+              },
+            ),
+            const Divider(height: 8),
+            SizedBox(
+              height: 230,
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final SitioReporteCatalogo sitio in widget.sitios)
+                    CheckboxListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(sitio.nombre),
+                      value: _todos || _seleccionados.contains(sitio.id),
+                      onChanged: _todos
+                          ? null
+                          : (bool? v) {
+                              setState(() {
+                                if (v == true) {
+                                  _seleccionados.add(sitio.id);
+                                } else {
+                                  _seleccionados.remove(sitio.id);
+                                }
+                              });
+                            },
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final String nombre = _nombre.text.trim();
+            if (nombre.isEmpty) return;
+            if (!_todos && _seleccionados.isEmpty) return;
+            final bool duplicado = widget.items.any(
+              (TipoDanoCatalogo t) =>
+                  t.nombre.toLowerCase() == nombre.toLowerCase() &&
+                  t.id != widget.item?.id,
+            );
+            if (duplicado) return;
+            Navigator.pop(
+              context,
+              TipoDanoCatalogo(
+                id:
+                    widget.item?.id ??
+                    _idUnico(
+                      slugCatalogo(nombre),
+                      widget.items.map((TipoDanoCatalogo t) => t.id).toSet(),
+                    ),
+                nombre: nombre,
+                sitios: _todos
+                    ? const <String>[]
+                    : (_seleccionados.toList()..sort()),
                 activo: widget.item?.activo ?? true,
                 orden: widget.item?.orden ?? widget.items.length,
               ),

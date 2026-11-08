@@ -71,6 +71,30 @@ class CatalogoMemoriaRepository implements CatalogoRepository {
   }
 
   @override
+  Future<Result<void>> eliminarEdificio(String id) async {
+    _edificios.removeWhere((EdificioCatalogo e) => e.id == id);
+    return const Success(null);
+  }
+
+  @override
+  Future<Result<void>> eliminarSitio(String id) async {
+    _sitios.removeWhere((SitioReporteCatalogo s) => s.id == id);
+    return const Success(null);
+  }
+
+  @override
+  Future<Result<void>> eliminarTipoDano(String id) async {
+    _danos.removeWhere((TipoDanoCatalogo t) => t.id == id);
+    return const Success(null);
+  }
+
+  @override
+  Future<Result<void>> eliminarZona(String id) async {
+    _zonas.removeWhere((ZonaExteriorCatalogo z) => z.id == id);
+    return const Success(null);
+  }
+
+  @override
   Future<Result<void>> sembrarIniciales() async => const Success(null);
 
   void _reemplazar<T>(List<T> lista, T item, bool Function(T) coincide) {

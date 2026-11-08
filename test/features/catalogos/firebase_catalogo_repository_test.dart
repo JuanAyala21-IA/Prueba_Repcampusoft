@@ -49,6 +49,7 @@ void main() {
       const TipoDanoCatalogo(
         id: 'vidrio_roto',
         nombre: 'Vidrio roto',
+        sitios: ['bano'],
         orden: 99,
       ),
     );
@@ -58,5 +59,27 @@ void main() {
 
     expect(edificios.any((e) => e.id == 'edificio_f'), isTrue);
     expect(danos.any((d) => d.id == 'vidrio_roto'), isTrue);
+  });
+
+  test('eliminarEdificio y eliminarTipoDano quitan del catálogo', () async {
+    await repository.sembrarIniciales();
+    await repository.eliminarEdificio('edificio_a');
+    await repository.eliminarTipoDano('silla_danada');
+
+    final edificios = await repository.watchEdificios().first;
+    final danos = await repository.watchTiposDano().first;
+
+    expect(edificios.any((e) => e.id == 'edificio_a'), isFalse);
+    expect(danos.any((d) => d.id == 'silla_danada'), isFalse);
+  });
+
+  test('los daños por defecto quedan relacionados con sus sitios', () async {
+    final tipos = tiposDanoPorDefecto();
+    final silla = tipos.firstWhere((t) => t.nombre == 'Silla dañada');
+    final sanitario = tipos.firstWhere((t) => t.nombre == 'Sanitario dañado');
+
+    expect(silla.sitios.contains('aula'), isTrue);
+    expect(silla.sitios.contains('bano'), isFalse);
+    expect(sanitario.sitios, ['bano']);
   });
 }
