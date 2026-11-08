@@ -55,19 +55,16 @@ class EstadisticasReportes {
   final double promedioDiasSolucion;
 
   int get solucionados => porEstado[EstadoReporte.solucionado] ?? 0;
-  int get rechazados => porEstado[EstadoReporte.rechazado] ?? 0;
   int get pendientes => porEstado[EstadoReporte.pendiente] ?? 0;
   int get enRevision => porEstado[EstadoReporte.enRevision] ?? 0;
   int get enProceso => porEstado[EstadoReporte.enProceso] ?? 0;
 
-  /// Reportes que todavía no están cerrados (ni solucionados ni rechazados).
+  /// Reportes que todavía no están cerrados (pendientes, en revisión o en
+  /// proceso).
   int get sinCerrar => pendientes + enRevision + enProceso;
 
   double get porcentajeSolucionados =>
       total == 0 ? 0 : (solucionados / total) * 100;
-
-  double get porcentajeRechazados =>
-      total == 0 ? 0 : (rechazados / total) * 100;
 
   factory EstadisticasReportes.calcular(
     List<Reporte> reportes, {

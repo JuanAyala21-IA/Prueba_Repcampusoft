@@ -23,8 +23,7 @@ service cloud.firestore {
       return (evento == 'creado'      ? 'Pendiente' :
               evento == 'en_revision' ? 'En revision' :
               evento == 'en_proceso'  ? 'En proceso' :
-              evento == 'solucionado' ? 'Solucionado' :
-              evento == 'rechazado'   ? 'Rechazado' : '');
+              evento == 'solucionado' ? 'Solucionado' : '');
     }
 
     function canReadNotif(notifId) {
@@ -70,9 +69,9 @@ service cloud.firestore {
     }
 
     function isAllowedStateTransition(current, next) {
-      return (current == 'Pendiente' && (next == 'En revision' || next == 'Rechazado'))
-          || (current == 'En revision' && (next == 'En proceso' || next == 'Rechazado'))
-          || (current == 'En proceso' && (next == 'Solucionado' || next == 'Rechazado'));
+      return (current == 'Pendiente' && next == 'En revision')
+          || (current == 'En revision' && next == 'En proceso')
+          || (current == 'En proceso' && next == 'Solucionado');
     }
 
     // Google no expone `email_verified` en el token de Firebase cuando el
@@ -183,7 +182,7 @@ service cloud.firestore {
         && request.resource.data.estado == 'Pendiente'
         // Validación server-side doble (cliente ya valida): no vacíos.
         // Firestore Rules no tiene trim(), por eso se valida size()>0 y != "".
-        // Cliente hace trim(); server rechaza strings vacíos. Whitespace-only ("   ")
+        // Cliente hace trim(); server descarta strings vacíos. Whitespace-only ("   ")
         // pasaría size()>0 pero riesgo bajo y no crítico para esta entrega.
         && request.resource.data.tipoUbicacion in [
              'aula', 'laboratorio', 'sala_computo', 'bano', 'pasillo',
@@ -237,10 +236,6 @@ service cloud.firestore {
         && isAllowedStateTransition(resource.data.estado, request.resource.data.estado)
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['estado', 'observacionAdmin', 'actualizadoEn', 'encargadoUid', 'encargadoNombre', 'tieneEvidenciaSolucion'])
-        && (request.resource.data.estado != 'Rechazado'
-            || (request.resource.data.observacionAdmin != null
-                && request.resource.data.observacionAdmin != ''))
-        // Al solucionar se registra quién atendió la reparación.
         && (request.resource.data.estado != 'Solucionado'
             || (request.resource.data.encargadoUid == request.auth.uid
                 && request.resource.data.encargadoNombre is string
@@ -263,15 +258,9 @@ service cloud.firestore {
       // Una vez tomado, SOLO el encargado asignado puede cambiar su estado.
       allow update: if isMantenimiento()
         && resource.data.get('asignadoA', '') == request.auth.uid
-        // Mantenimiento atiende y soluciona; rechazar es decisión del
-        // administrativo.
-        && request.resource.data.estado != 'Rechazado'
         && isAllowedStateTransition(resource.data.estado, request.resource.data.estado)
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['estado', 'observacionAdmin', 'actualizadoEn', 'encargadoUid', 'encargadoNombre', 'tieneEvidenciaSolucion'])
-        && (request.resource.data.estado != 'Rechazado'
-            || (request.resource.data.observacionAdmin != null
-                && request.resource.data.observacionAdmin != ''))
         && (request.resource.data.estado != 'Solucionado'
             || (request.resource.data.encargadoUid == request.auth.uid
                 && request.resource.data.encargadoNombre is string
@@ -295,10 +284,7 @@ service cloud.firestore {
                           && historialId == reportId + '_' + request.resource.data.estadoNuevo
                           && request.resource.data.adminUid == request.auth.uid
                           && request.resource.data.adminNombre is string
-                          && request.resource.data.adminNombre.size() > 0
-                          && (request.resource.data.estadoNuevo != 'Rechazado'
-                              || (request.resource.data.observacion != null
-                                  && request.resource.data.observacion != '')))
+                          && request.resource.data.adminNombre.size() > 0)
                      || (isPersona()
                           && request.resource.data.estadoAnterior == 'Pendiente'
                           && request.resource.data.estadoNuevo == 'Pendiente'
@@ -392,7 +378,7 @@ service cloud.firestore {
                   == eventToEstado(request.resource.data.evento))
           || (canManageReports()
                && request.resource.data.destinoRol == null
-               && request.resource.data.evento in ['en_revision', 'en_proceso', 'solucionado', 'rechazado']
+               && request.resource.data.evento in ['en_revision', 'en_proceso', 'solucionado']
                && notifId == request.resource.data.reportId + '_' + request.resource.data.evento
                && request.resource.data.tipo == 'reporte'
                && request.resource.data.autorUid == request.auth.uid

@@ -165,7 +165,7 @@ y el detalle, y el admin puede cambiarles el estado sin errores.
   obligatoria, catálogo por espacio, auditorio, biblioteca, cafetería,
   parqueadero, sala de cómputo, errores y `Failure`.
 - `test/features/reportes/data/firebase_reporte_repository_test.dart`:
-  persistencia de aula, baño y zona exterior; rechazo de foto grande; lectura
+  persistencia de aula, baño y zona exterior; descarte de foto grande; lectura
   de documentos legados con `salon`; notificación con ubicación reconstruida.
 - `test/features/admin/presentation/reported_damages_screen_test.dart`:
   búsqueda por `ubicacionTexto` en reportes exteriores.

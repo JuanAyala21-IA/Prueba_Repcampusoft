@@ -29,8 +29,8 @@ En **Daños Reportados** el superadministrador tiene dos pestañas:
     solución de todos los reportes.
   - **Periodo seleccionado**: total, porcentaje resuelto y promedio de días
     hasta la solución.
-  - **Distribución por estado**: barras de Pendiente, En revisión, En proceso,
-    Solucionado y Rechazado.
+  - **Distribución por estado**: barras de Pendiente, En revisión, En proceso
+    y Solucionado.
   - **Reportes por día o por mes**: si el rango supera 90 días se agrupa por
     mes; si no, por día.
   - **Detalle por fecha**: totales exactos por cada día/mes.

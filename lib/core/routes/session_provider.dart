@@ -396,7 +396,7 @@ class SesionController extends Notifier<Sesion> {
     );
     // Importante: el perfil se crea ANTES de vincular la contraseña. Al
     // vincularla, Firebase marca `email_verified = false`, y entonces la regla
-    // de Firestore rechazaría la creación de `users/{uid}`. Con el token de
+    // de Firestore bloquearía la creación de `users/{uid}`. Con el token de
     // Google (recién refrescado) la regla sí autoriza.
     final Result<RolEnum> resultado = await repo.crearPerfil(perfil);
     if (resultado is Failure<RolEnum>) {

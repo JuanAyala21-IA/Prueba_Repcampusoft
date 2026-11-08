@@ -66,13 +66,6 @@ void main() {
           encargadoNombre: 'Carlos Mantenimiento',
           tieneEvidencia: true,
         ),
-        reporte(
-          id: 'r-rechazado',
-          estado: EstadoReporte.rechazado,
-          creadoEn: ahora.subtract(const Duration(days: 6)),
-          actualizadoEn: ahora.subtract(const Duration(days: 2)),
-          observacionAdmin: 'No corresponde a un daño real',
-        ),
       ];
 
       final csv = generarCsvReportes(reportes, ahora: ahora);
@@ -80,8 +73,8 @@ void main() {
       expect(csv.startsWith('\uFEFF'), isTrue);
       final lineas = csv.substring(1).split('\r\n');
       expect(lineas.first, encabezadosCsvReportes.join(separadorCsvReportes));
-      // 5 reportes + encabezado + salto final vacío.
-      expect(lineas.length, 7);
+      // 4 reportes + encabezado + salto final vacío.
+      expect(lineas.length, 6);
 
       for (final estado in EstadoReporte.values) {
         expect(csv.contains(estado.nombre), isTrue, reason: estado.nombre);
@@ -89,7 +82,6 @@ void main() {
       expect(csv.contains('r-pendiente'), isTrue);
       expect(csv.contains('r-solucionado'), isTrue);
       expect(csv.contains('Carlos Mantenimiento'), isTrue);
-      expect(csv.contains('No corresponde a un daño real'), isTrue);
       expect(csv.contains('Sí'), isTrue);
     });
 

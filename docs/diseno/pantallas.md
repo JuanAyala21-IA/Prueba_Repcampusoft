@@ -19,7 +19,6 @@ Documento de referencia técnica y de diseño UI/UX basado en los prototipos vis
 | **Estado: En Revisión** | Ámbar / Amarillo | `#FFD13B` / `#F8C644` | Badge con icono de lupa (`Icons.search_rounded`). |
 | **Estado: En Proceso** | Azul Cielo / Cian | `#29B6F6` | Badge con icono de herramienta (`Icons.build_rounded`). |
 | **Estado: Solucionado** | Verde Éxito | `#8CEE55` / `#94E04B` | Badge con icono de check (`Icons.check_circle_rounded`). |
-| **Estado: Rechazado** | Gris Oscuro / Rojo Muy Oscuro | `#616161` / `#B71C1C` | Badge con icono de alerta/cancelación (`Icons.cancel_rounded`). Evita confusión con Pendiente. |
 | **Bordes y Divisores** | Gris Neutro Tenue | `#D1D5DB` / `#E5E7EB` | Líneas divisorias internas en tarjetas y formularios. |
 
 ---
@@ -346,12 +345,6 @@ Documento de referencia técnica y de diseño UI/UX basado en los prototipos vis
       - Mensaje: "El daño en el salon 204A ha sido solucionado. ¡Gracias por tu reporte!".
       - Fecha/hora: Icono de calendario + "06/09/2026".
       - Flecha (`>`).
-    - **Notificación 4 (Rechazado)**:
-      - Icono de alerta / triángulo de advertencia (`Icons.warning_amber_rounded`).
-      - Título: "Reporte rechazado" (Bold).
-      - Mensaje: "Tu reporte #04 no pudo ser procesado por informacion incompleta.".
-      - Fecha/hora: Icono de calendario + "03/09/2026".
-      - Flecha (`>`).
 - **Acciones y Navegación**:
   - *Tap en botón retroceso*: Regresa a **Inicio Estudiante** (`4.png`).
   - *Tap en una notificación*: Dirige al detalle del reporte correspondiente (`9.png`).
@@ -438,13 +431,7 @@ Documento de referencia técnica y de diseño UI/UX basado en los prototipos vis
       - Mensaje: "El daño en el salon 204A ha sido solucionado.".
       - Fecha/hora: Icono calendario + "07/09/2026 - 4:32 p.m.".
       - Flecha (`>`).
-    - **Notificación 4 (Rechazado)**:
-      - Icono de advertencia triangular.
-      - Título: "Reporte rechazado" (Bold).
-      - Mensaje: "Tu reporte #04 no pudo ser procesado por informacion incompleta.".
-      - Fecha/hora: Icono calendario + "06/09/2026 - 2:45 p.m.".
-      - Flecha (`>`).
-    - **Notificación 5 (Aviso Administrativo)**:
+    - **Notificación 4 (Aviso Administrativo)**:
       - Icono de megáfono.
       - Título: "Aviso Administrativo" (Bold).
       - Mensaje: "Se realizara mantenimiento en el salon 204A el proximo viernes".

@@ -55,7 +55,7 @@ El alcance del sistema abarca:
 | **RF-12** | **Listado de Reportes Propios del Estudiante**: El sistema debe listar cronológicamente los reportes generados por el estudiante autenticado, mostrando tipo de daño, descripción resumida y miniatura de la evidencia. | **Must Have** | `10.png` (Pantalla 10: Lista Tus Reportes) |
 | **RF-13** | **Detalle de Reporte para Estudiante**: Al seleccionar un reporte propio, el estudiante debe poder visualizar toda la información enviada: ubicación exacta, descripción completa, imagen de evidencia en tamaño completo y estado actual de atención. | **Must Have** | `9.png` (Pantalla 9: Detalle Reporte) |
 | **RF-14** | **Panel de Gestión, Búsqueda y Filtrado de Incidencias (Admin)**: El personal administrativo debe poder listar todos los reportes de la institución, buscar por término clave, filtrar mediante chips por estado (`Todos`, `Pendientes`, `En revision`, `Solucionados`) y filtrar por ubicación (`Edificio`). | **Must Have** | `12.png` (Pantalla 12: Daños Reportados) |
-| **RF-15** | **Detalle y Actualización de Estado de Reporte (Admin)**: El administrativo debe poder abrir un reporte, visualizar la evidencia y datos del estudiante que reportó, modificar su estado (`Pendiente`, `En revision`, `En proceso`, `Solucionado`, `Rechazado`) y agregar una nota u observación de atención. *(Hueco de diseño cubierto)* | **Must Have** | `12.png` -> *Detalle Gestión Admin* |
+| **RF-15** | **Detalle y Actualización de Estado de Reporte (Admin)**: El administrativo debe poder abrir un reporte, visualizar la evidencia y datos del estudiante que reportó, modificar su estado (`Pendiente`, `En revision`, `En proceso`, `Solucionado`) y agregar una nota u observación de atención. *(Hueco de diseño cubierto)* | **Must Have** | `12.png` -> *Detalle Gestión Admin* |
 | **RF-16** | **Bandeja de Notificaciones para Estudiante**: El estudiante debe visualizar una lista de notificaciones generadas por el cambio de estado de sus reportes, con indicación de fecha/hora, icono temático y estado de lectura (leída/no leída) persistido por usuario en `users/{uid}/notificacionesLeidas`. | **Must Have** | `11.png` (Pantalla 11: Notificaciones Estudiante) |
 | **RF-17** | **Bandeja de Notificaciones para Administrativo**: El personal administrativo debe contar con una bandeja con pestañas de filtro (`Todas`, `Reportes`, `Administrativo`, `Sistema`) para ver nuevos reportes (avisos `destinoRol == 'administrativo'`) y avisos institucionales, con lectura por usuario. | **Must Have** | `13.png` (Pantalla 13: Notificaciones Admin) |
 | **RF-18** | **Notificaciones en la App con Historial Persistente y Push (FCM)**: El sistema debe notificar al estudiante cuando un reporte cambie de estado y a los administrativos cuando se registre un nuevo reporte. Las notificaciones se persisten en Firestore (bandeja con estado leída/no leída) y se muestran dentro de la app en tiempo real mediante listeners sobre la colección `notifications`. El push real (alerta con la app fuera de primer plano) se habilita cuando el proyecto pase al plan Blaze (Cloud Function + FCM); **sin servidor, la alerta local NO se dispara con la app en segundo plano o cerrada** (se verifica en dispositivo real); la notificación aparece en la bandeja al reabrir la app gracias al historial persistente en Firestore. | **Must Have** | `11.png`, `13.png` + integración de notificaciones locales |
@@ -144,7 +144,7 @@ El alcance del sistema abarca:
 - **para** registrar el progreso de la reparación y notificar al estudiante.
 - **Criterios de Aceptación**:
   - **CA-06.1**: El administrador puede cambiar el estado siguiendo la máquina de estados permitida.
-  - **CA-06.2**: Puede ingresar una observación o nota justificativa (obligatoria en caso de `Rechazado`).
+  - **CA-06.2**: Puede ingresar una observación o nota de atención (opcional).
   - **CA-06.3**: Al guardar, se actualiza el documento en Firestore, se genera un registro en la colección de `notificaciones` para el estudiante y la app del estudiante lo muestra como notificación local (push real vía FCM solo al activarse el plan Blaze).
 
 ---
@@ -184,29 +184,27 @@ Se definen **5 estados oficiales** para todo reporte de daño:
                   │ (Recibido)   │
                   └──────┬───────┘
                          │
-           ┌─────────────┴─────────────┐
-           ▼                           ▼
-    ┌──────────────┐            ┌──────────────┐
-    │ En revisión  │            │  Rechazado   │◄────────┐
-    └──────┬───────┘            └──────────────┘         │
-           │                           ▲                 │
-           ▼                           │                 │
-    ┌──────────────┐                   │                 │
-    │  En proceso  ├───────────────────┘                 │
-    └──────┬───────┘                                     │
-           │                                             │
-           ▼                                             │
-    ┌──────────────┐                                     │
-    │ Solucionado  │                                     │
-    └──────────────┘                                     │
+                         ▼
+                  ┌──────────────┐
+                  │ En revisión  │
+                  └──────┬───────┘
+                         │
+                         ▼
+                  ┌──────────────┐
+                  │  En proceso  │
+                  └──────┬───────┘
+                         │
+                         ▼
+                  ┌──────────────┐
+                  │ Solucionado  │
+                  └──────────────┘
 ```
 
 #### Matriz de Transiciones Permitidas:
-1. **`Pendiente` (Recibido)**: Estado asignado automáticamente al crearse el reporte. Puede transicionar a: `En revisión` o `Rechazado`.
-2. **`En revisión`**: El equipo de mantenimiento inspecciona el reporte y evalúa recursos. Puede transicionar a: `En proceso` o `Rechazado`.
-3. **`En proceso`**: La cuadrilla u operario está ejecutando la reparación en el sitio. Puede transicionar a: `Solucionado` o `Rechazado`.
+1. **`Pendiente` (Recibido)**: Estado asignado automáticamente al crearse el reporte. Puede transicionar a: `En revisión`.
+2. **`En revisión`**: El equipo de mantenimiento inspecciona el reporte y evalúa recursos. Puede transicionar a: `En proceso`.
+3. **`En proceso`**: La cuadrilla u operario está ejecutando la reparación en el sitio. Puede transicionar a: `Solucionado`.
 4. **`Solucionado`**: Reparación finalizada con éxito. Estado final / de cierre.
-5. **`Rechazado`**: Reporte desestimado (información insuficiente, daño inexistente o fuera de competencia). Requiere motivo de rechazo.
 
 #### Especificación de Colores e Iconos Distintivos por Estado:
 Para garantizar accesibilidad y evitar confusiones visuales en las tarjetas (especialmente entre estados críticos), la identificación no depende únicamente del color, sino de la combinación de **color + icono exclusivo**:
@@ -217,7 +215,6 @@ Para garantizar accesibilidad y evitar confusiones visuales en las tarjetas (esp
 | **En revisión** | Ámbar / Mostaza | `#FFD13B` | Lupa (`Icons.search_rounded`) | Denota análisis técnico y evaluación de recursos. Diseñado en `12.png`. |
 | **En proceso** | Azul Cielo / Cian | `#29B6F6` | Llave inglesa (`Icons.build_rounded`) | Armoniza con las herramientas operativas y se diferencia con claridad del amarillo y verde. |
 | **Solucionado** | Verde Éxito | `#8CEE55` | Check en círculo (`Icons.check_circle_rounded`) | Denota resolución y cierre satisfactorio. Diseñado en `12.png`. |
-| **Rechazado** | Gris Oscuro Neutro | `#616161` | Triángulo / Cruz de cancelación (`Icons.cancel_rounded` / `Icons.warning_amber_rounded`) | **Ajuste clave**: El uso de Gris Oscuro `#616161` (o Rojo muy oscuro `#B71C1C`) junto con el icono de alerta/cancelación elimina por completo la confusión con el Coral de *Pendiente*, asegurando contraste y legibilidad. |
 
 ---
 
@@ -245,7 +242,7 @@ Para garantizar accesibilidad y evitar confusiones visuales en las tarjetas (esp
    - **IDs deterministas (idempotencia)**: el `reportId` se genera en el cliente **antes** del batch; `notifId = reportId + '_' + evento` y `historialId = reportId + '_inicial'` (o `reportId + '_' + estadoNuevo`). Un reintento no duplica, pero **Firestore no devuelve `ALREADY_EXISTS`**: la escritura con ID ya existente se evalúa como *update* y la regla la niega → el commit falla con **`PERMISSION_DENIED`**. Procedimiento del cliente:
      1. Si el commit falla con `PERMISSION_DENIED`, se envía 1 `get` a `reports/{reportId}`.
      2. **Existe con `uid == auth.uid`** (o, en la transición del admin, el estado objetivo ya aplicado) → el intento previo **tuvo éxito** (el batch es atómico): se continúa como éxito, sin duplicar notificaciones ni transiciones.
-     3. **No existe / no coincide** → el `PERMISSION_DENIED` es un rechazo real de las reglas: se informa el error al usuario (no se asume éxito).
+     3. **No existe / no coincide** → el `PERMISSION_DENIED` es un denegación real de las reglas: se informa el error al usuario (no se asume éxito).
    - **Validación dentro del batch (reglas §3)**: con `getAfter()`/`existsAfter()` la regla comprueba que la notificación y la entrada de historial acompañan al reporte creado/transicionado **en el mismo commit** (p. ej. `!exists(report) && getAfter(report).uid == autorUid`), con máximo 10 accesos por evaluación.
    - Si se requiere leer el estado antes de escribir, se usa `runTransaction` en lugar de batch.
 4. **Entrega (notificaciones locales activas; push FCM futuro)**:
@@ -294,7 +291,7 @@ Para garantizar accesibilidad y evitar confusiones visuales en las tarjetas (esp
 1. **Dominio de Correo**: Se asume que el registro y acceso está restringido a correos con terminación institucional (ej. `@uts.edu.co` o `@correo.uts.edu.co`).
 2. **Almacenamiento de Evidencias (decisión vigente)**: Cada foto se comprime en el cliente (~500 KB) y se codifica en Base64 en el documento separado `reports/{id}/media/foto`; el reporte conserva `tieneFoto`. Si el proyecto migra a plan Blaze, se reemplaza por Firebase Storage en `reportes/{reporte_id}/{timestamp}.jpg` (misma interfaz `FotoRepository`).
 3. **Privacidad de Reportes**: Los estudiantes únicamente tienen visibilidad de sus propios reportes creados; el personal administrativo tiene visibilidad global de todos los reportes del campus.
-4. **Auditoría e Inmutabilidad**: Los reportes no se eliminan físicamente de la base de datos por motivos de trazabilidad histórica. Si un reporte es inválido, se marca con estado `Rechazado`.
+4. **Auditoría e Inmutabilidad**: Los reportes no se eliminan físicamente de la base de datos por motivos de trazabilidad histórica.
 5. **Cantidad de Fotos**: Para mantener la agilidad del prototipo en esta fase, se asume **1 fotografía de evidencia por reporte** (como se ilustra en `8.png` y `9.png`).
 6. **Normalización de Correos**: Se asume que Firebase Authentication normaliza los correos a minúsculas al crear cuentas; por ello `admins_permitidos` se almacena en minúsculas y la verificación con `exists()` es exacta.
 7. **Alcance v1 — Should Have fuera de esta versión**: RF-09 (Edición de perfil) queda **NO implementado** — placeholder sin lógica, botón deshabilitado; RF-10 (Recuperar contraseña) queda **PARCIALMENTE implementado** — envío de correo ruteado funciona, falta 'cambiar contraseña desde el perfil'. Ambos quedan fuera del alcance de esta entrega sin afectar ningún requisito **Must Have**, todos completos y verificados.
@@ -304,6 +301,5 @@ Para garantizar accesibilidad y evitar confusiones visuales en las tarjetas (esp
 ### 8.2. Preguntas Abiertas para Definición con el Usuario
 Para las siguientes fases del proyecto, se plantean las siguientes preguntas:
 1. **Catálogo de Ubicaciones**: ¿Los nombres de los edificios (Edificio A, B, C...) y pisos deben estar preconfigurados en una lista fija en la app o cargarse dinámicamente desde una colección en Firestore (`edificios`)?
-2. **Reapertura de Reportes**: Si un reporte queda en estado `Rechazado`, ¿el estudiante podrá editarlo y reenviarlo, o deberá crear un reporte nuevo desde cero?
-3. **Múltiples Fotos de Evidencia**: ¿Se requerirá en una fase posterior permitir adjuntar múltiples fotos o solo 1 imagen es suficiente para el alcance del trabajo de grado?
+2. **Múltiples Fotos de Evidencia**: ¿Se requerirá en una fase posterior permitir adjuntar múltiples fotos o solo 1 imagen es suficiente para el alcance del trabajo de grado?
 4. **Carga Inicial de Administradores**: ¿Cómo se gestionará la lista inicial de `admins_permitidos`? (¿Directamente desde la consola de Firebase o mediante un script de inicialización?).

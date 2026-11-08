@@ -29,7 +29,7 @@ class BlockedAccountScreen extends ConsumerWidget {
               const Icon(
                 Icons.block_outlined,
                 size: 80,
-                color: AppColors.estadoRechazado,
+                color: AppColors.grisOscuro,
               ),
               const SizedBox(height: 20),
               Text(

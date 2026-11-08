@@ -73,8 +73,7 @@ class _AssignedReportsScreenState extends ConsumerState<AssignedReportsScreen> {
                           if (!_rango.contiene(reporte.creadoEn)) {
                             return false;
                           }
-                          return reporte.estado != EstadoReporte.solucionado &&
-                              reporte.estado != EstadoReporte.rechazado;
+                          return reporte.estado != EstadoReporte.solucionado;
                         }).toList()..sort((a, b) {
                           final DateTime fechaA = a.asignadoEn ?? a.creadoEn;
                           final DateTime fechaB = b.asignadoEn ?? b.creadoEn;

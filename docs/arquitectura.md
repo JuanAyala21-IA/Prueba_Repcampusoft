@@ -120,7 +120,7 @@ reports/{id}
 ├── ubicacionTexto:  string          # "Edificio A · Piso 4 · Salón 402 A" (listas, detalle, notificaciones)
 ├── salon:           string (legado) # Solo en reportes antiguos; no se escribe en creaciones nuevas
 ├── tieneFoto:       bool                # true si existe reports/{id}/media/foto (la lista NO descarga la imagen)
-├── estado:          string          # Pendiente | En revision | En proceso | Solucionado | Rechazado
+├── estado:          string          # Pendiente | En revision | En proceso | Solucionado
 ├── observacionAdmin:string (opcional)  # Nota del administrativo (RF-15)
 ├── creadoEn:        timestamp
 └── actualizadoEn:   timestamp
@@ -134,7 +134,7 @@ reports/{id}
 reports/{id}/historial/{histId}
 ├── estadoAnterior:  string
 ├── estadoNuevo:     string
-├── observacion:     string (opcional, obligatoria si estadoNuevo == "Rechazado")
+├── observacion:     string (opcional)   # Nota de gestión del cambio de estado
 ├── adminUid:        string          # Quién realizó el cambio
 ├── adminNombre:     string
 └── fecha:           timestamp
@@ -166,7 +166,7 @@ notifications/{notifId}
 ├── titulo:       string          # "Reporte Solucionado", "Nuevo reporte de daño"...
 ├── mensaje:      string
 ├── reportId:     string (opcional)   # presente si tipo == "reporte"; navegación al detalle
-├── evento:       string (opcional)   # "creado"|"en_revision"|"en_proceso"|"solucionado"|"rechazado"
+├── evento:       string (opcional)   # "creado"|"en_revision"|"en_proceso"|"solucionado"
 │                                   #   Evento del reporte que origina la notificación (si tipo=="reporte").
 │                                   #   "creado" = reporte registrado (persona); los demás = transición admin.
 ├── estadoNuevo:  string (opcional)   # Estado destino (ej: "Solucionado"), informativo (se deriva de evento)
@@ -186,7 +186,7 @@ notifications/{notifId}
 - La notificación usa un ID **derivado** `notifId = reportId + '_' + evento` (p. ej. `3f2a…9b_creado`, `3f2a…9b_solucionado`), exigido en las reglas (§3). Como cada estado se alcanza a lo sumo una vez (la máquina de estados es acíclica), por cada (reporte, evento) existe **a lo sumo una** notificación.
 - La entrada inicial del historial usa `historialId = reportId + '_inicial'`; las transiciones del admin usan `historialId = reportId + '_' + estadoNuevo` (también único por ser la misma la máquina de estados acíclica).
 
-> **Falla de `create` sobre un ID ya existente**: Firestore **no** devuelve `ALREADY_EXISTS`. Al reintentar, cada escritura con ese ID ya existente se evalúa contra la regla como un **update**; como `notifications` e `historial` son `allow update, delete: false` (y `reports` update es solo admin), la regla se evalúa en falso y el commit falla con **`PERMISSION_DENIED`**. Por eso la idempotencia se resuelve en el cliente: si un commit falla con `PERMISSION_DENIED`, se consulta `reports/{reportId}`; si existe y `uid == auth.uid`, el intento previo **sí** tuvo éxito (el batch es atómico) y se continúa como éxito sin duplicar; si no existe, el `PERMISSION_DENIED` es un rechazo real de las reglas y se informa al usuario. Procedimiento completo en §6.2/§6.3 y requisitos §6.3.3.
+> **Falla de `create` sobre un ID ya existente**: Firestore **no** devuelve `ALREADY_EXISTS`. Al reintentar, cada escritura con ese ID ya existente se evalúa contra la regla como un **update**; como `notifications` e `historial` son `allow update, delete: false` (y `reports` update es solo admin), la regla se evalúa en falso y el commit falla con **`PERMISSION_DENIED`**. Por eso la idempotencia se resuelve en el cliente: si un commit falla con `PERMISSION_DENIED`, se consulta `reports/{reportId}`; si existe y `uid == auth.uid`, el intento previo **sí** tuvo éxito (el batch es atómico) y se continúa como éxito sin duplicar; si no existe, el `PERMISSION_DENIED` es un denegación real de las reglas y se informa al usuario. Procedimiento completo en §6.2/§6.3 y requisitos §6.3.3.
 
 Reglas de correspondencia:
 - Una **persona** NUNCA escribe hacia otra persona (no hay `uidDestino` creado por persona); al reportar solo crea el aviso con `destinoRol == 'administrativo'` y `evento == 'creado'`.
@@ -266,8 +266,7 @@ service cloud.firestore {
       return (evento == 'creado'      ? 'Pendiente' :
               evento == 'en_revision' ? 'En revision' :
               evento == 'en_proceso'  ? 'En proceso' :
-              evento == 'solucionado' ? 'Solucionado' :
-              evento == 'rechazado'   ? 'Rechazado' : null);
+              evento == 'solucionado' ? 'Solucionado' : null);
     }
 
     // El usuario autenticado puede ver la notificación notifId.
@@ -290,9 +289,9 @@ service cloud.firestore {
 
     // Máquina de estados del reporte (requisitos.md §6.2)
     function isAllowedStateTransition(current, next) {
-      return (current == 'Pendiente' && (next == 'En revision' || next == 'Rechazado'))
-          || (current == 'En revision' && (next == 'En proceso' || next == 'Rechazado'))
-          || (current == 'En proceso' && (next == 'Solucionado' || next == 'Rechazado'));
+      return (current == 'Pendiente' && next == 'En revision')
+          || (current == 'En revision' && next == 'En proceso')
+          || (current == 'En proceso' && next == 'Solucionado');
     }
 
     // ============ CATÁLOGOS (si se materializan en Firestore) ============
@@ -391,7 +390,7 @@ service cloud.firestore {
         //  - getAfter(report).uid == autor  -> la entrada pertenece a su propio reporte.
         //  - historialId == reportId + '_inicial' -> id determinista: si se reintenta,
         //    la escritura ya existente se evalúa como update (? -> PERMISSION_DENIED, no
-        //    ALREADY_EXISTS); el cliente distingue éxito real vs rechazo (§6.2).
+        //    ALREADY_EXISTS); el cliente distingue éxito real vs denegación (§6.2).
         // ===== TRANSICIÓN (creada SOLO por el ADMIN, en el batch de cambio de estado) =====
         //  - get(report).estado == estadoAnterior y getAfter(report).estado == estadoNuevo
         //    -> la entrada documenta exactamente la transición que ocurre en ese mismo batch.
@@ -480,7 +479,7 @@ service cloud.firestore {
              //     - getAfter(report).estado == eventToEstado(evento)
           || (isAdministrativo()
                && request.resource.data.destinoRol == null
-               && request.resource.data.evento in ['en_revision', 'en_proceso', 'solucionado', 'rechazado']
+               && request.resource.data.evento in ['en_revision', 'en_proceso', 'solucionado']
                && notifId == request.resource.data.reportId + '_' + request.resource.data.evento
                && request.resource.data.tipo == 'reporte'
                && request.resource.data.autorUid == request.auth.uid
@@ -527,7 +526,7 @@ El rol **se decide por el correo y no por lo que el usuario escoja**: el selecto
 
 **Mecanismo de seguridad principal: el correo verificado.** Firebase Auth permite crear cuentas sin probar la titularidad del correo; por eso la cuenta NO obtiene rol ni perfil (`users/{uid}` no se crea) hasta que el usuario confirma el enlace de verificación. Solo entonces la regla autoriza crear `users/{uid}`, exigiendo `request.auth.token.email_verified == true` y validando la pertenencia a `admins_permitidos` con `exists()`.
 
-> El intento de auto-promoción rechazado por la regla **ya no es el mecanismo de seguridad principal**: ahora la puerta es `email_verified`. El reintento de rol solo resuelve la mala selección del usuario (UX), mientras que la autoridad última del rol sigue siendo la regla de Firestore.
+> El intento de auto-promoción bloqueado por la regla **ya no es el mecanismo de seguridad principal**: ahora la puerta es `email_verified`. El reintento de rol solo resuelve la mala selección del usuario (UX), mientras que la autoridad última del rol sigue siendo la regla de Firestore.
 
 **Excepción Google.** Firebase puede no marcar `email_verified` para el proveedor `google.com`. La app considera confiable esa identidad porque Google ya validó el correo, y las reglas aplican la misma excepción con `correoConfiable()` (`sign_in_provider == 'google.com'`). El acceso usa el selector nativo (`google_sign_in`) y `signInWithCredential` con el ID token, sin pasar por el navegador. No hay restricción de dominio: se acepta cualquier cuenta de Google (decisión del proyecto) y el rol administrativo sigue dependiendo de `admins_permitidos`. La configuración de Firebase se documenta en `docs/configuracion_google.md`.
 
@@ -721,7 +720,7 @@ sequenceDiagram
     Note over S: se evalúan como update y la regla las NEGA -> commit falla con PERMISSION_DENIED (NO ALREADY_EXISTS)
     S->>FS: ¿existe reports/{reportId} con uid == auth.uid?  (1 get)
     Note over S: existe y uid propio -> el intento previo tuvo ÉXITO (batch atómico): se continúa como éxito, sin duplicar
-    Note over S: no existe -> PERMISSION_DENIED es un rechazo real de las reglas: se informa al usuario
+    Note over S: no existe -> PERMISSION_DENIED es un denegación real de las reglas: se informa al usuario
     S->>FS: batch: setDoc reports/{reportId}/media/foto { base64(~500KB), tamanoBytes, mimeType, creadoEn } (DENTRO del batch atomico, i8.1)
     Note over FS: regla media/foto usa getAfter(reporteDoc(reporteId)) -- la foto y el reporte se crean juntos (T2)
     Note over FS: atomica: si la foto falla, el reporte tampoco existe (mismo batch)
@@ -752,7 +751,7 @@ sequenceDiagram
     Note over FS: falla con PERMISSION_DENIED (update negado), NO ALREADY_EXISTS
     A->>FS: ante PERMISSION_DENIED: ¿reports/{reportId} existe y su estado == estadoNuevo objetivo? (1 get)
     Note over A: lo cumple -> el intento previo tuvo ÉXITO (transición+historial+notif ya aplicados); se muestra éxito sin duplicar
-    Note over A: no lo cumple -> rechazo real (p. ej. transición no válida) para informar al usuario
+    Note over A: no lo cumple -> denegación real (p. ej. transición no válida) para informar al usuario
     FS-->>A: commit OK (3 operaciones atómicas; si falla una, ninguna se aplica)
     Note over S: onSnapshot(notifs uidDestino==miuid) -> bandeja 11.png con 1 nueva
     Note over S: badge = notif visibles ∩ notificacionesLeidas; NotificacionesService muestra alerta local (push real en §9)
@@ -830,7 +829,7 @@ Dado que en Spark **los clientes crean los documentos de `notifications` directa
 | 2 | **`reportId` falso o ajeno** (anunciar un reporte inexistente o de otro usuario). | ✅ **Mitigado** | La regla exige `notifId == reportId + '_' + evento`, `!exists(report)` **y** `getAfter(report).uid == autorUid == auth.uid` en el mismo commit. El aviso solo existe si el reporte se creó en ese mismo batch y pertenece al autor. En la rama admin, `uidDestino == get(report).uid`. |
 | 3 | **Broadcast administrativo abusivo** (inundar `destinoRol == 'administrativo'`). | ⚠️ **Aceptado** | Riesgo de confianza inherente al whitelist de admins. Sin rate limit en Spark; si se desea endurecer, se limita en la Cloud Function (tasa por admin). |
 | 4 | **Entrada inicial de historial forjada** (`Pendiente → Pendiente` en reportes ajenos). | ✅ **Mitigado** | `historialId == reportId + '_inicial'` + `!exists(report)` + `getAfter(report).uid == auth.uid` en el mismo batch. Solo el autor crea la entrada inicial de su propio reporte. |
-| 5 | **Duplicados al reintentar** (mismo `reportId` tras timeout sin confirmación). | ✅ **Mitigado** | Los IDs deterministas (`notifId`, `historialId`) hacen único cada (reporte, evento); si el commit se reintenta, la escritura con ID ya existente se evalúa como update y la regla la NEGA (→ `PERMISSION_DENIED`, **no** `ALREADY_EXISTS`). Procedimiento del cliente: ante `PERMISSION_DENIED` se consulta `reports/{reportId}` (si `uid == autor` y/o estado objetivo ya aplicado → éxito previo, sin duplicar; si no → rechazo real). Detalle en §6.2/§6.3. |
+| 5 | **Duplicados al reintentar** (mismo `reportId` tras timeout sin confirmación). | ✅ **Mitigado** | Los IDs deterministas (`notifId`, `historialId`) hacen único cada (reporte, evento); si el commit se reintenta, la escritura con ID ya existente se evalúa como update y la regla la NEGA (→ `PERMISSION_DENIED`, **no** `ALREADY_EXISTS`). Procedimiento del cliente: ante `PERMISSION_DENIED` se consulta `reports/{reportId}` (si `uid == autor` y/o estado objetivo ya aplicado → éxito previo, sin duplicar; si no → denegación real). Detalle en §6.2/§6.3. |
 | 6 | **Limpiar bandejas ajenas / inventar notificaciones**. | ✅ **Mitigado** | `notificacionesLeidas` exige `canReadNotif` (solo notificaciones que el usuario puede ver) y `notifications` es inmutable (`update/delete: false`). |
 
 **Acceso a documentos por evaluación**: `get()`/`getAfter()`/`exists()`/`existsAfter()` cuentan contra el tope de 10 por evaluación; el recuento por operación está en la nota de la §3 (máx. 6 en la rama B). Al reutilizar los mismos documentos (`users/{uid}`, `reports/{reportId}`) el consumo de lecturas facturadas permanece acotado.

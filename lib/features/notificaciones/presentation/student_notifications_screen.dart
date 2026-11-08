@@ -238,8 +238,6 @@ class _NotificacionItem extends ConsumerWidget {
           return Icons.build_outlined;
         case NotificacionEvento.solucionado:
           return Icons.check_circle_outline;
-        case NotificacionEvento.rechazado:
-          return Icons.warning_amber_rounded;
       }
     }
     switch (tipo) {

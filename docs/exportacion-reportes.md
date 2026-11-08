@@ -13,7 +13,7 @@ entrar a la pantalla.
 ## Qué contiene el archivo
 
 El CSV incluye **todos** los reportes de Firestore (`reports`), sin importar su
-estado: `Pendiente`, `En revision`, `En proceso`, `Solucionado` y `Rechazado`.
+estado: `Pendiente`, `En revision`, `En proceso` y `Solucionado`.
 La pantalla muestra un resumen con el total y la cantidad por estado antes de
 descargar.
 

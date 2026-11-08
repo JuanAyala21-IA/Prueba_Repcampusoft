@@ -41,8 +41,8 @@ abstract final class AppColors {
   /// Estado: Solucionado (verde éxito).
   static const Color estadoSolucionado = Color(0xFF8CEE55);
 
-  /// Estado: Rechazado (gris oscuro, sin confundir con Pendiente).
-  static const Color estadoRechazado = Color(0xFF616161);
+  /// Gris oscuro neutro para mensajes de cuenta deshabilitada.
+  static const Color grisOscuro = Color(0xFF616161);
 
   /// Fondo oliva oscuro para WelcomeScreen (variante oscura de utsGreen).
   static const Color welcomeBackground = Color(0xFF6B7C00);

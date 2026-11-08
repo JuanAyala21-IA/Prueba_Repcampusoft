@@ -137,7 +137,7 @@ class Reporte {
   final DateTime? actualizadoEn;
 
   /// Observación escrita por el funcionario al gestionar el reporte (por
-  /// ejemplo, el motivo del rechazo).
+  /// ejemplo, una nota de atención).
   final String? observacionAdmin;
 
   /// Funcionario (administrativo o mantenimiento) que solucionó el daño.

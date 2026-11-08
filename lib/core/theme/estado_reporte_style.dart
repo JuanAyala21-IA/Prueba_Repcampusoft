@@ -6,9 +6,9 @@ import 'app_colors.dart';
 ///
 /// ## Canonicidad Firestore (§2.4 / firestore.rules)
 /// En Firestore (`reports/{id}.estado`), el historial `_inicial` y la
-/// notificación `_creado` se persisten los 5 estados con **identificador
+/// notificación `_creado` se persisten los 4 estados con **identificador
 /// ASCII sin acentos**: `'Pendiente'`, `'En revision'`, `'En proceso'`,
-/// `'Solucionado'`, `'Rechazado'`. Las reglas `create` (§2.4) validan
+/// `'Solucionado'`. Las reglas `create` (§2.4) validan
 /// `estado=='Pendiente'` y la transición admin `isAllowedStateTransition` usa
 /// esos mismos ASCII (§2.6/Fase 6).
 ///
@@ -22,8 +22,7 @@ enum EstadoReporte {
   solucionado(
     color: AppColors.estadoSolucionado,
     icono: Icons.check_circle_rounded,
-  ),
-  rechazado(color: AppColors.estadoRechazado, icono: Icons.cancel_rounded);
+  );
 
   const EstadoReporte({required this.color, required this.icono});
 
@@ -38,7 +37,6 @@ enum EstadoReporte {
     EstadoReporte.enRevision => 'En revision',
     EstadoReporte.enProceso => 'En proceso',
     EstadoReporte.solucionado => 'Solucionado',
-    EstadoReporte.rechazado => 'Rechazado',
   };
 
   /// Etiqueta de UI con acentos (contraste: "En revisión", "En proceso", ...).
@@ -47,7 +45,6 @@ enum EstadoReporte {
     EstadoReporte.enRevision => 'En revisión',
     EstadoReporte.enProceso => 'En proceso',
     EstadoReporte.solucionado => 'Solucionado',
-    EstadoReporte.rechazado => 'Rechazado',
   };
 
   /// Color de texto legible sobre el color del estado.

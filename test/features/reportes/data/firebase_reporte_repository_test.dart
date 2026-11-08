@@ -657,83 +657,34 @@ void main() {
       expect(notifQuery.docs, isEmpty);
     });
 
-    test('Rechazar sin observación: devuelve Failure', () async {
-      const reportId = 'test-report-3';
-      await crearReporteInicial(
-        reportId: reportId,
-        estadoInicial: 'Pendiente',
-        uidAutor: 'autor-uid',
-      );
+    test(
+      'Estado desconocido: devuelve Failure y no cambia el estado',
+      () async {
+        const reportId = 'test-report-3';
+        await crearReporteInicial(
+          reportId: reportId,
+          estadoInicial: 'Pendiente',
+          uidAutor: 'autor-uid',
+        );
 
-      final result = await repository.cambiarEstado(
-        reportId: reportId,
-        estadoNuevo: 'Rechazado',
-        observacion: null,
-      );
+        final result = await repository.cambiarEstado(
+          reportId: reportId,
+          estadoNuevo: 'Estado inexistente',
+          observacion: null,
+        );
 
-      expect(result, isA<Failure<void>>());
-      expect(
-        (result as Failure<void>).message,
-        'Observación obligatoria al rechazar',
-      );
+        expect(result, isA<Failure<void>>());
+        expect((result as Failure<void>).message, contains('Estado inválido'));
 
-      // Verificar que NO se cambió el estado
-      final reportDoc = await fakeFirestore
-          .collection('reports')
-          .doc(reportId)
-          .get();
-      expect(reportDoc.data()!['estado'], 'Pendiente');
-    });
+        // Verificar que NO se cambió el estado
+        final reportDoc = await fakeFirestore
+            .collection('reports')
+            .doc(reportId)
+            .get();
+        expect(reportDoc.data()!['estado'], 'Pendiente');
+      },
+    );
 
-    test('Rechazar con observación: éxito, historial y notificación con patrón snake_case', () async {
-      const reportId = 'test-report-4';
-      await crearReporteInicial(
-        reportId: reportId,
-        estadoInicial: 'En revision',
-        uidAutor: 'autor-uid',
-      );
-
-      final result = await repository.cambiarEstado(
-        reportId: reportId,
-        estadoNuevo: 'Rechazado',
-        observacion: 'Información insuficiente',
-      );
-
-      expect(result, isA<Success<void>>());
-
-      // Verificar estado actualizado
-      final reportDoc = await fakeFirestore
-          .collection('reports')
-          .doc(reportId)
-          .get();
-      expect(reportDoc.data()!['estado'], 'Rechazado');
-      expect(reportDoc.data()!['observacionAdmin'], 'Información insuficiente');
-
-      // Verificar historial con ID {reportId}_Rechazado
-      final historialDoc = await fakeFirestore
-          .collection('reports')
-          .doc(reportId)
-          .collection('historial')
-          .doc('${reportId}_Rechazado')
-          .get();
-      expect(historialDoc.exists, isTrue);
-      final historialData = historialDoc.data()!;
-      expect(historialData['estadoAnterior'], 'En revision');
-      expect(historialData['estadoNuevo'], 'Rechazado');
-      expect(historialData['observacion'], 'Información insuficiente');
-
-      // Verificar notificación con ID {reportId}_rechazado (evento snake_case)
-      final notifDoc = await fakeFirestore
-          .collection('notifications')
-          .doc('${reportId}_rechazado')
-          .get();
-      expect(notifDoc.exists, isTrue);
-      final notifData = notifDoc.data()!;
-      expect(notifData['evento'], 'rechazado');
-      expect(notifData['estadoNuevo'], 'Rechazado');
-      expect(notifData['uidDestino'], 'autor-uid');
-      expect(notifData['destinoRol'], isNull);
-    });
     test(
       'Solucionar sin evidencia: devuelve Failure y no cambia el estado',
       () async {

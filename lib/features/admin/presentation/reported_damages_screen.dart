@@ -46,7 +46,6 @@ class _ReportedDamagesScreenState extends ConsumerState<ReportedDamagesScreen> {
     'En revision': 'En revisión',
     'En proceso': 'En proceso',
     'Solucionado': 'Solucionados',
-    'Rechazado': 'Rechazados',
   };
 
   @override
@@ -101,8 +100,7 @@ class _ReportedDamagesScreenState extends ConsumerState<ReportedDamagesScreen> {
       if (esMantenimiento) {
         if (reporte.asignadoAUsuario(sesion.uid)) return true;
         if (!reporte.sinAsignar) return false;
-        return reporte.estado != EstadoReporte.solucionado &&
-            reporte.estado != EstadoReporte.rechazado;
+        return reporte.estado != EstadoReporte.solucionado;
       }
       return true;
     }).toList();
@@ -237,7 +235,6 @@ class _ReportedDamagesScreenState extends ConsumerState<ReportedDamagesScreen> {
                               _chip('En revision'),
                               _chip('En proceso'),
                               _chip('Solucionado'),
-                              if (!esMantenimiento) _chip('Rechazado'),
                             ],
                           ),
                         ),

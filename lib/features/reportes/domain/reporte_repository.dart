@@ -8,9 +8,9 @@ import 'servicio_adjuntar_foto.dart';
 /// Matriz de transiciones permitidas (§6.2 requisitos.md).
 /// Claves = estado actual (valorFirestore ASCII), valores = estados destino permitidos.
 const Map<String, Set<String>> transicionesPermitidas = {
-  'Pendiente': {'En revision', 'Rechazado'},
-  'En revision': {'En proceso', 'Rechazado'},
-  'En proceso': {'Solucionado', 'Rechazado'},
+  'Pendiente': {'En revision'},
+  'En revision': {'En proceso'},
+  'En proceso': {'Solucionado'},
 };
 
 /// Retorna los estados destino permitidos desde un [estadoActual], o conjunto vacío si es final.
@@ -35,7 +35,7 @@ abstract interface class ReporteRepository {
   /// documento queda a medias. El `reportId` (determinista/reutilizable §6.1)
   /// es el ID de idempotencia ante reintentos.
   ///
-  /// Devuelve [Failure] si: sin conexión (RNF-04), reglas rechazan la creación,
+  /// Devuelve [Failure] si: sin conexión (RNF-04), reglas bloquean la creación,
   /// o el batch falla. En caso de reintento tras `PERMISSION_DENIED` consulta
   /// `reports/{reportId}` para no duplicar (§6.2).
   Future<Result<String>> crear(BorradorReporte borrador);
@@ -53,7 +53,7 @@ abstract interface class ReporteRepository {
 
   /// Stream de TODOS los reportes (admin), ordenados por `creadoEn` descendente.
   /// Filtros opcionales: [filtroEstado] (ej. 'Pendiente', 'En revision', 'En proceso',
-  /// 'Solucionado', 'Rechazado') y [filtroEdificio] (ej. 'Edificio A').
+  /// 'Solucionado') y [filtroEdificio] (ej. 'Edificio A').
   Stream<List<Reporte>> watchTodosLosReportes({
     String? filtroEstado,
     String? filtroEdificio,
@@ -61,11 +61,11 @@ abstract interface class ReporteRepository {
 
   /// Cambia el estado de un reporte (admin) con validación de transiciones
   /// permitidas (§6.2 requisitos.md):
-  /// - Pendiente → En revision | Rechazado
-  /// - En revision → En proceso | Rechazado
-  /// - En proceso → Solucionado | Rechazado
-  /// - Solucionado / Rechazado: no transicionan (estados finales).
-  /// Exige [observacion] si [estadoNuevo] == 'Rechazado'.
+  /// - Pendiente → En revision
+  /// - En revision → En proceso
+  /// - En proceso → Solucionado
+  /// - Solucionado: estado final.
+  /// [observacion] queda como nota opcional de gestión.
   /// [evidenciaBase64] es la foto que prueba la solución: **obligatoria** al
   /// pasar a `Solucionado`, se guarda en `media/solucion`.
   /// Devuelve [Failure] si la transición no es válida (validación cliente, sin tocar Firestore).
@@ -76,22 +76,16 @@ abstract interface class ReporteRepository {
     String? evidenciaBase64,
   }) {
     // Nota: el estado actual se leerá en la implementación (Firestore) antes de escribir.
-    // Aquí validamos solo que el estadoNuevo sea un estado conocido y exigimos observación
-    // para Rechazado. La validación estricta de estadoActual → estadoNuevo se hará en la
-    // implementación con runTransaction.
+    // Aquí validamos solo que el estadoNuevo sea un estado conocido. La validación
+    // estricta de estadoActual → estadoNuevo se hará en la implementación con runTransaction.
     const estadosValidos = [
       'Pendiente',
       'En revision',
       'En proceso',
       'Solucionado',
-      'Rechazado',
     ];
     if (!estadosValidos.contains(estadoNuevo)) {
       return Future.value(Failure('Estado inválido: $estadoNuevo'));
-    }
-    if (estadoNuevo == 'Rechazado' &&
-        (observacion == null || observacion.trim().isEmpty)) {
-      return Future.value(Failure('Observación obligatoria al rechazar'));
     }
     // La validación de transición concreta (estadoActual → estadoNuevo) requiere
     // leer el doc; se hace en la implementación Firebase con runTransaction.

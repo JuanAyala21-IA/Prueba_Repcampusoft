@@ -255,7 +255,7 @@ void main() {
       expect(fake.contrasenas['uid-google-ana@gmail.com'], 'secreta123');
       // El perfil se crea antes de vincular la contraseña, porque vincularla
       // hace que Firebase marque el correo como no verificado y la regla de
-      // Firestore rechazaría `users/{uid}`.
+      // Firestore bloquearía `users/{uid}`.
       expect(fake.perfilExistiaAlAsignarContrasena, isTrue);
 
       final Sesion aplicada = container.read(sesionProvider);

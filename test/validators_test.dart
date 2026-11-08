@@ -1,15 +1,15 @@
-import 'package:flutter_test/flutter_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
 
 import 'package:repcampusoft/core/utils/validators.dart';
 
 void main() {
   group('Validators.correo', () {
-    test('rechaza vacío', () {
+    test('descarta vacío', () {
       expect(Validators.correo(null), 'Ingresa tu correo institucional');
       expect(Validators.correo('   '), 'Ingresa tu correo institucional');
     });
 
-    test('rechaza mal formato', () {
+    test('descarta mal formato', () {
       expect(Validators.correo('vacio'), 'Correo no válido');
       expect(Validators.correo('a@b'), 'Correo no válido');
       expect(Validators.correo('a b@c.co'), 'Correo no válido');
@@ -22,7 +22,7 @@ void main() {
   });
 
   group('Validators.requerido', () {
-    test('rechaza vacío y acepta valor', () {
+    test('descarta vacío y acepta valor', () {
       expect(Validators.requerido(null), 'Este campo es obligatorio');
       expect(Validators.requerido('  '), 'Este campo es obligatorio');
       expect(Validators.requerido('Ana'), isNull);
@@ -30,7 +30,7 @@ void main() {
   });
 
   group('Validators.contrasena', () {
-    test('rechaza vacía y corta', () {
+    test('descarta vacía y corta', () {
       expect(Validators.contrasena(''), 'Ingresa tu contraseña');
       expect(Validators.contrasena('12345'), 'Mínimo 6 caracteres');
     });

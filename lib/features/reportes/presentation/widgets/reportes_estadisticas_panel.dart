@@ -393,8 +393,7 @@ class _TarjetaDetalle extends StatelessWidget {
                         child: Text(
                           '${item.total} total · '
                           '${item.cantidad(EstadoReporte.solucionado)} sol. · '
-                          '${item.cantidad(EstadoReporte.enProceso)} proc. · '
-                          '${item.cantidad(EstadoReporte.rechazado)} rech.',
+                          '${item.cantidad(EstadoReporte.enProceso)} proc.',
                           style: AppTypography.textTheme.bodySmall?.copyWith(
                             color: AppColors.textSecondary,
                           ),

@@ -233,7 +233,7 @@ class _ContenidoExportacion extends StatelessWidget {
                             'el filtro seleccionado. Puedes ajustarlo aquí.'
                       : 'El archivo incluye todos los reportes registrados, sin '
                             'importar su estado: pendientes, en revisión, en '
-                            'proceso, solucionados y rechazados.',
+                            'proceso y solucionados.',
                   style: AppTypography.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 16),

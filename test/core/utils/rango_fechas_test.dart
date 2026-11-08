@@ -69,7 +69,7 @@ void main() {
     });
   });
 
-  test('EstadoReporte sigue exponiendo los cinco estados del CSV', () {
-    expect(EstadoReporte.values.length, 5);
+  test('EstadoReporte expone los cuatro estados del flujo', () {
+    expect(EstadoReporte.values.length, 4);
   });
 }

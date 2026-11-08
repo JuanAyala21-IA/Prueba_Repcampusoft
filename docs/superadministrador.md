@@ -58,7 +58,7 @@ Functions (plan Blaze). Por eso la eliminación es **lógica**:
 
 - Se marca `users/{uid}.activo = false` y `eliminadoEn`.
 - El gate de sesión muestra la pantalla **Cuenta deshabilitada**.
-- Las reglas de Firestore rechazan las operaciones de cuentas inactivas.
+- Las reglas de Firestore bloquean las operaciones de cuentas inactivas.
 
 Para eliminar definitivamente la cuenta de Authentication hay que hacerlo desde
 Firebase Console o con el Admin SDK.
@@ -90,7 +90,7 @@ minúsculas), así que no genera consultas adicionales a Firestore.
 
 Al elegir el estado **Solucionado**, el encargado **debe** adjuntar una foto
 desde la galería: sin evidencia el botón de guardar queda deshabilitado y el
-repositorio/reglas rechazan la operación. La imagen se comprime (~500 KB JPEG),
+repositorio/reglas bloquean la operación. La imagen se comprime (~500 KB JPEG),
 se guarda en `reports/{id}/media/solucion` (Base64, igual que la foto inicial)
 y el reporte queda con `tieneEvidenciaSolucion: true`. La evidencia se muestra
 en el detalle del reporte para el autor, el administrativo y el
@@ -119,7 +119,7 @@ Las reglas de `firestore.rules` aplican estos criterios:
 - `media/solucion` solo se puede crear si el reporte queda en `Solucionado`
   con `tieneEvidenciaSolucion: true`.
 - Solucionar exige que la transacción cree `media/solucion`; sin evidencia la
-  actualización del reporte se rechaza.
+  actualización del reporte se bloquea.
 
 ## Dónde está implementado
 

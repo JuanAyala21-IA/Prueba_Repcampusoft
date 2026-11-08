@@ -65,7 +65,6 @@ List<Reporte> _crearReportes() {
     crear('r-revision', EstadoReporte.enRevision, 4),
     crear('r-proceso', EstadoReporte.enProceso, 3),
     crear('r-solucionado', EstadoReporte.solucionado, 2),
-    crear('r-rechazado', EstadoReporte.rechazado, 1),
   ];
 }
 
@@ -113,12 +112,11 @@ void main() {
       await tester.pump();
 
       expect(find.text('Reportes en CSV'), findsOneWidget);
-      expect(find.text('Total: 5'), findsOneWidget);
+      expect(find.text('Total: 4'), findsOneWidget);
       expect(find.text('Pendiente: 1'), findsOneWidget);
       expect(find.text('En revisión: 1'), findsOneWidget);
       expect(find.text('En proceso: 1'), findsOneWidget);
       expect(find.text('Solucionado: 1'), findsOneWidget);
-      expect(find.text('Rechazado: 1'), findsOneWidget);
     });
 
     testWidgets('descarga el CSV con todos los reportes y estados', (
@@ -152,7 +150,7 @@ void main() {
         saver.nombreRecibido,
         matches(r'^reportes_repcampusoft_\d{4}-\d{2}-\d{2}_\d{4}$'),
       );
-      expect(find.text('CSV guardado con 5 reportes.'), findsOneWidget);
+      expect(find.text('CSV guardado con 4 reportes.'), findsOneWidget);
     });
 
     testWidgets('avisa cuando el usuario cancela el guardado', (tester) async {
@@ -196,7 +194,7 @@ void main() {
 
       expect(find.text('Total: 1'), findsOneWidget);
       expect(find.text('Solucionado: 1'), findsOneWidget);
-      expect(find.textContaining('1 de 5 reportes'), findsOneWidget);
+      expect(find.textContaining('1 de 4 reportes'), findsOneWidget);
 
       final boton = find.widgetWithText(PrimaryButton, 'Descargar CSV');
       await tester.ensureVisible(boton);

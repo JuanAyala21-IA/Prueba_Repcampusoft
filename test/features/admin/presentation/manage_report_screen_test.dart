@@ -49,7 +49,7 @@ void main() {
     }
 
     testWidgets(
-      'estado Pendiente: muestra solo botones En revision y Rechazado (transiciones permitidas)',
+      'estado Pendiente: muestra solo el botón En revisión (transición permitida)',
       (tester) async {
         final reporte = Reporte(
           reporteId: 'test-report-id',
@@ -76,20 +76,16 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Verificar que NO aparecen botones para estados finales o intermedios no permitidos
+        // Verificar que NO aparecen estados no permitidos
         expect(find.textContaining('Solucionado'), findsNothing);
         expect(find.textContaining('En proceso'), findsNothing);
 
-        // Verificar que SÍ aparecen los botones permitidos desde Pendiente
-        expect(
-          find.textContaining('En revisi'),
-          findsOneWidget,
-        ); // "En revisión"
-        expect(find.textContaining('Rechazado'), findsOneWidget);
+        // Verificar que SÍ aparece el botón permitido desde Pendiente
+        expect(find.textContaining('En revisi'), findsOneWidget);
       },
     );
 
-    testWidgets('mantenimiento: no ofrece Rechazado en los cambios de estado', (
+    testWidgets('mantenimiento: muestra solo la transición permitida', (
       tester,
     ) async {
       final reporte = Reporte(
@@ -120,84 +116,79 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('En revisi'), findsOneWidget);
-      expect(find.textContaining('Rechazado'), findsNothing);
     });
 
-    testWidgets(
-      'estado En revision: muestra solo botones En proceso y Rechazado',
-      (tester) async {
-        final reporte = Reporte(
-          reporteId: 'test-report-id',
-          uid: 'autor-uid',
-          correoAutor: 'autor@example.com',
-          tipoDano: 'Lámpara averiada',
-          tipoUbicacion: TipoEspacio.aula,
-          edificio: 'Edificio B',
-          piso: 'Piso 2',
-          espacio: 'Salón 202',
-          descripcion: 'Lámpara no enciende',
-          estado: EstadoReporte.enRevision,
-          tieneFoto: false,
-          creadoEn: DateTime(2026, 9, 7, 14, 0),
-        );
+    testWidgets('estado En revision: muestra solo el botón En proceso', (
+      tester,
+    ) async {
+      final reporte = Reporte(
+        reporteId: 'test-report-id',
+        uid: 'autor-uid',
+        correoAutor: 'autor@example.com',
+        tipoDano: 'Lámpara averiada',
+        tipoUbicacion: TipoEspacio.aula,
+        edificio: 'Edificio B',
+        piso: 'Piso 2',
+        espacio: 'Salón 202',
+        descripcion: 'Lámpara no enciende',
+        estado: EstadoReporte.enRevision,
+        tieneFoto: false,
+        creadoEn: DateTime(2026, 9, 7, 14, 0),
+      );
 
-        final historial = <HistorialEntry>[];
+      final historial = <HistorialEntry>[];
 
-        await tester.pumpWidget(
-          createTestWidget(
-            reporteStream: Stream.value(reporte),
-            historialStream: Stream.value(historial),
-          ),
-        );
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        createTestWidget(
+          reporteStream: Stream.value(reporte),
+          historialStream: Stream.value(historial),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // No debe aparecer Pendiente ni Solucionado
-        expect(find.textContaining('Pendiente'), findsNothing);
-        expect(find.textContaining('Solucionado'), findsNothing);
+      // No debe aparecer Pendiente ni Solucionado
+      expect(find.textContaining('Pendiente'), findsNothing);
+      expect(find.textContaining('Solucionado'), findsNothing);
 
-        // Sí debe aparecer En proceso y Rechazado
-        expect(find.textContaining('En proceso'), findsOneWidget);
-        expect(find.textContaining('Rechazado'), findsOneWidget);
-      },
-    );
+      // Sí debe aparecer En proceso
+      expect(find.textContaining('En proceso'), findsOneWidget);
+    });
 
-    testWidgets(
-      'estado En proceso: muestra solo botones Solucionado y Rechazado',
-      (tester) async {
-        final reporte = Reporte(
-          reporteId: 'test-report-id',
-          uid: 'autor-uid',
-          correoAutor: 'autor@example.com',
-          tipoDano: 'Puerta dañada',
-          tipoUbicacion: TipoEspacio.aula,
-          edificio: 'Edificio B',
-          piso: 'Piso 1',
-          espacio: 'Salón 105',
-          descripcion: 'Puerta no cierra',
-          estado: EstadoReporte.enProceso,
-          tieneFoto: false,
-          creadoEn: DateTime(2026, 9, 5, 9, 0),
-        );
+    testWidgets('estado En proceso: muestra solo el botón Solucionado', (
+      tester,
+    ) async {
+      final reporte = Reporte(
+        reporteId: 'test-report-id',
+        uid: 'autor-uid',
+        correoAutor: 'autor@example.com',
+        tipoDano: 'Puerta dañada',
+        tipoUbicacion: TipoEspacio.aula,
+        edificio: 'Edificio B',
+        piso: 'Piso 1',
+        espacio: 'Salón 105',
+        descripcion: 'Puerta no cierra',
+        estado: EstadoReporte.enProceso,
+        tieneFoto: false,
+        creadoEn: DateTime(2026, 9, 5, 9, 0),
+      );
 
-        final historial = <HistorialEntry>[];
+      final historial = <HistorialEntry>[];
 
-        await tester.pumpWidget(
-          createTestWidget(
-            reporteStream: Stream.value(reporte),
-            historialStream: Stream.value(historial),
-          ),
-        );
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        createTestWidget(
+          reporteStream: Stream.value(reporte),
+          historialStream: Stream.value(historial),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // No debe aparecer Pendiente ni En revision
-        expect(find.textContaining('Pendiente'), findsNothing);
-        expect(find.textContaining('En revisi'), findsNothing);
+      // No debe aparecer Pendiente ni En revision
+      expect(find.textContaining('Pendiente'), findsNothing);
+      expect(find.textContaining('En revisi'), findsNothing);
 
-        // Sí debe aparecer Solucionado y Rechazado
-        expect(find.textContaining('Solucionado'), findsOneWidget);
-        expect(find.textContaining('Rechazado'), findsOneWidget);
-      },
-    );
+      // Sí debe aparecer Solucionado
+      expect(find.textContaining('Solucionado'), findsOneWidget);
+    });
 
     testWidgets(
       'estado Solucionado: NO muestra botones de transición (estado final)',
@@ -235,40 +226,7 @@ void main() {
     );
 
     testWidgets(
-      'estado Rechazado: NO muestra botones de transición (estado final)',
-      (tester) async {
-        final reporte = Reporte(
-          reporteId: 'test-report-id',
-          uid: 'autor-uid',
-          correoAutor: 'autor@example.com',
-          tipoDano: 'Reporte falso',
-          tipoUbicacion: TipoEspacio.aula,
-          edificio: 'Edificio C',
-          piso: 'Piso 1',
-          espacio: 'Salón 101',
-          descripcion: 'Reporte sin fundamento',
-          estado: EstadoReporte.rechazado,
-          tieneFoto: false,
-          creadoEn: DateTime(2026, 9, 8, 10, 30),
-        );
-
-        final historial = <HistorialEntry>[];
-
-        await tester.pumpWidget(
-          createTestWidget(
-            reporteStream: Stream.value(reporte),
-            historialStream: Stream.value(historial),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.textContaining('estado final'), findsOneWidget);
-        expect(find.byType(ChoiceChip), findsNothing);
-      },
-    );
-
-    testWidgets(
-      'al elegir Rechazado: botón guardar deshabilitado si no hay observación, habilitado al escribirla',
+      'al elegir En revisión: botón guardar habilitado sin observación',
       (tester) async {
         final reporte = Reporte(
           reporteId: 'test-report-id',
@@ -295,72 +253,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Encontrar y tocar el chip "Rechazado"
-        final rechazoChip = find.textContaining('Rechazado');
-        expect(rechazoChip, findsOneWidget);
-        await tester.ensureVisible(rechazoChip);
-        await tester.pumpAndSettle();
-        await tester.tap(rechazoChip);
-        await tester.pumpAndSettle();
-
-        // Verificar que el botón está deshabilitado (onPressed = null porque _requiereObservacion = true)
-        final guardarButton = tester.widget<PrimaryButton>(
-          find.byType(PrimaryButton),
-        );
-        expect(
-          guardarButton.onPressed,
-          isNull,
-          reason: 'Botón debe estar deshabilitado sin observación',
-        );
-
-        // Escribir observación
-        await tester.enterText(
-          find.byType(TextField),
-          'Información insuficiente',
-        );
-        await tester.pumpAndSettle();
-
-        // Verificar que el botón ahora está habilitado
-        final guardarButtonHabilitado = tester.widget<PrimaryButton>(
-          find.byType(PrimaryButton),
-        );
-        expect(
-          guardarButtonHabilitado.onPressed,
-          isNotNull,
-          reason: 'Botón debe estar habilitado con observación',
-        );
-      },
-    );
-
-    testWidgets(
-      'al elegir transición válida (no Rechazado): botón guardar habilitado sin observación',
-      (tester) async {
-        final reporte = Reporte(
-          reporteId: 'test-report-id',
-          uid: 'autor-uid',
-          correoAutor: 'autor@example.com',
-          tipoDano: 'Silla dañada',
-          tipoUbicacion: TipoEspacio.aula,
-          edificio: 'Edificio A',
-          piso: 'Piso 4',
-          espacio: 'Salón 402 A',
-          descripcion: 'Silla con tornillos sueltos',
-          estado: EstadoReporte.pendiente,
-          tieneFoto: false,
-          creadoEn: DateTime(2026, 9, 8, 10, 30),
-        );
-
-        final historial = <HistorialEntry>[];
-
-        await tester.pumpWidget(
-          createTestWidget(
-            reporteStream: Stream.value(reporte),
-            historialStream: Stream.value(historial),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        // Tocar "En revisión" (transición válida no Rechazado)
+        // Tocar "En revisión"
         final enRevisionChip = find.textContaining('En revisi');
         expect(enRevisionChip, findsOneWidget);
         await tester.ensureVisible(enRevisionChip);

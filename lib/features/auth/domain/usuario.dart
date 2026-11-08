@@ -23,7 +23,7 @@ class Usuario {
 
   /// `false` cuando el superadministrador eliminó (desactivó) la cuenta.
   /// La cuenta de Firebase Auth se conserva para auditoría, pero el gate de
-  /// sesión bloquea el acceso y las reglas de Firestore lo rechazan.
+  /// sesión bloquea el acceso y las reglas de Firestore lo bloquean.
   final bool activo;
 
   bool get esSuperadministrador => rol == RolEnum.superadministrador;

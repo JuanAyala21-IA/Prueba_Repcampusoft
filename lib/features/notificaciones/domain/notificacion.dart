@@ -2,13 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum NotificacionTipo { reporte, administrativo, sistema }
 
-enum NotificacionEvento {
-  creado,
-  enRevision,
-  enProceso,
-  solucionado,
-  rechazado,
-}
+enum NotificacionEvento { creado, enRevision, enProceso, solucionado }
 
 class Notificacion {
   const Notificacion({
@@ -87,8 +81,6 @@ class Notificacion {
         return NotificacionEvento.enProceso;
       case 'solucionado':
         return NotificacionEvento.solucionado;
-      case 'rechazado':
-        return NotificacionEvento.rechazado;
       default:
         return null;
     }

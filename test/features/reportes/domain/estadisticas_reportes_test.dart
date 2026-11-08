@@ -53,11 +53,6 @@ void main() {
       actualizadoEn: DateTime(2026, 11, 6, 9),
     ),
     crear(
-      id: 'rechazado',
-      estado: EstadoReporte.rechazado,
-      creadoEn: DateTime(2026, 11, 5, 9),
-    ),
-    crear(
       id: 'fuera',
       estado: EstadoReporte.pendiente,
       creadoEn: DateTime(2026, 10, 20, 9),
@@ -73,14 +68,13 @@ void main() {
       ),
     );
 
-    expect(stats.total, 5);
+    expect(stats.total, 4);
     expect(stats.pendientes, 1);
     expect(stats.enRevision, 1);
     expect(stats.enProceso, 1);
     expect(stats.solucionados, 1);
-    expect(stats.rechazados, 1);
     expect(stats.sinCerrar, 3);
-    expect(stats.porcentajeSolucionados, 20);
+    expect(stats.porcentajeSolucionados, 25);
   });
 
   test('agrupa por día y rellena los días sin reportes', () {

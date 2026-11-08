@@ -206,23 +206,13 @@ class _GestionReporteState extends ConsumerState<_GestionReporte> {
   void initState() {
     super.initState();
     _estadoSeleccionado = widget.reporte.estado.valorFirestore;
-    _observacionController.addListener(_actualizarEstadoBoton);
   }
 
   @override
   void dispose() {
-    _observacionController.removeListener(_actualizarEstadoBoton);
     _observacionController.dispose();
     super.dispose();
   }
-
-  void _actualizarEstadoBoton() {
-    if (mounted) setState(() {});
-  }
-
-  bool get _requiereObservacion =>
-      _estadoSeleccionado == 'Rechazado' &&
-      (_observacionController.text.trim().isEmpty);
 
   /// La foto de evidencia es obligatoria al marcar el reporte como solucionado.
   bool get _requiereEvidencia =>
@@ -231,7 +221,6 @@ class _GestionReporteState extends ConsumerState<_GestionReporte> {
   bool get _puedeGuardar =>
       _estadoSeleccionado != null &&
       _estadoSeleccionado != widget.reporte.estado.valorFirestore &&
-      !_requiereObservacion &&
       !_requiereEvidencia &&
       !_guardando;
 
@@ -352,16 +341,10 @@ class _GestionReporteState extends ConsumerState<_GestionReporte> {
     final Set<String> destinosPermitidos = _transicionesPermitidas(
       estadoActual,
     );
-    // Mantenimiento atiende y soluciona; rechazar es una decisión
-    // administrativa, así que esa opción no se le ofrece.
-    final List<String> destinosVisibles = esMantenimiento
-        ? destinosPermitidos.where((e) => e != 'Rechazado').toList()
-        : destinosPermitidos.toList();
+    final List<String> destinosVisibles = destinosPermitidos.toList();
     final bool asignadoAMi = reporte.asignadoAUsuario(sesion.uid);
     final bool asignadoAOtro = !reporte.sinAsignar && !asignadoAMi;
-    final bool esFinal =
-        reporte.estado == EstadoReporte.solucionado ||
-        reporte.estado == EstadoReporte.rechazado;
+    final bool esFinal = reporte.estado == EstadoReporte.solucionado;
     // El encargado de mantenimiento debe tomar el reporte antes de atenderlo;
     // una vez asignado, solo él puede cambiar su estado.
     final bool puedeTomar = esMantenimiento && reporte.sinAsignar && !esFinal;
@@ -681,9 +664,7 @@ class _GestionReporteState extends ConsumerState<_GestionReporte> {
                           controller: _observacionController,
                           maxLines: 3,
                           decoration: InputDecoration(
-                            hintText: _estadoSeleccionado == 'Rechazado'
-                                ? 'Motivo del rechazo (obligatorio)'
-                                : 'Observación opcional...',
+                            hintText: 'Observación opcional...',
                             hintStyle: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 13,
@@ -705,9 +686,6 @@ class _GestionReporteState extends ConsumerState<_GestionReporte> {
                                 width: 2,
                               ),
                             ),
-                            errorText: _requiereObservacion
-                                ? 'La observación es obligatoria al rechazar'
-                                : null,
                           ),
                         ),
                         const SizedBox(height: 22),

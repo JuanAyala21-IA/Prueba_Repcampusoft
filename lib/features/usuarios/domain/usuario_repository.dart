@@ -24,7 +24,7 @@ abstract interface class UsuarioRepository {
   });
 
   /// Deshabilita la cuenta (no borra el historial de Firebase Auth). El gate
-  /// de sesión bloquea el acceso y las reglas de Firestore rechazan sus
+  /// de sesión bloquea el acceso y las reglas de Firestore bloquean sus
   /// operaciones.
   Future<Result<void>> eliminarUsuario(Usuario usuario);
 }

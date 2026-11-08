@@ -247,20 +247,15 @@ class FirebaseReporteRepository implements ReporteRepository {
     String? observacion,
     String? evidenciaBase64,
   }) async {
-    // Validación de dominio: estadoNuevo válido y observación si Rechazado
+    // Validación de dominio: estadoNuevo válido.
     const estadosValidos = [
       'Pendiente',
       'En revision',
       'En proceso',
       'Solucionado',
-      'Rechazado',
     ];
     if (!estadosValidos.contains(estadoNuevo)) {
       return Failure('Estado inválido: $estadoNuevo');
-    }
-    if (estadoNuevo == 'Rechazado' &&
-        (observacion == null || observacion.trim().isEmpty)) {
-      return Failure('Observación obligatoria al rechazar');
     }
 
     // La evidencia es obligatoria al marcar el reporte como solucionado; se
@@ -411,7 +406,6 @@ class FirebaseReporteRepository implements ReporteRepository {
           'En revision' => 'Reporte en revisi\u00f3n',
           'En proceso' => 'Reporte en proceso',
           'Solucionado' => 'Reporte solucionado',
-          'Rechazado' => 'Reporte rechazado',
           _ => 'Actualizaci\u00f3n de reporte',
         };
         final mensaje = switch (estadoNuevo) {
@@ -421,8 +415,6 @@ class FirebaseReporteRepository implements ReporteRepository {
             'Tu reporte de $tipoDano en $ubicacion est\u00e1 en proceso de reparaci\u00f3n.',
           'Solucionado' =>
             'Tu reporte de $tipoDano en $ubicacion ha sido solucionado.',
-          'Rechazado' =>
-            'Tu reporte de $tipoDano en $ubicacion ha sido rechazado.',
           _ =>
             'Tu reporte de $tipoDano en $ubicacion cambi\u00f3 a $estadoNuevo.',
         };
@@ -516,7 +508,7 @@ class FirebaseReporteRepository implements ReporteRepository {
 
         final data = reporteSnap.data()!;
         final estadoActual = data['estado'] as String? ?? '';
-        if (estadoActual == 'Solucionado' || estadoActual == 'Rechazado') {
+        if (estadoActual == 'Solucionado') {
           throw FirebaseException(
             plugin: 'firestore',
             code: 'closed-report',

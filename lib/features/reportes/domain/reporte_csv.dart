@@ -35,8 +35,8 @@ const List<String> encabezadosCsvReportes = <String>[
 
 /// Genera el contenido CSV (UTF-8 con BOM) con **todos** los reportes.
 ///
-/// - Incluye todos los estados: Pendiente, En revisión, En proceso,
-///   Solucionado y Rechazado.
+/// - Incluye todos los estados: Pendiente, En revisión, En proceso y
+///   Solucionado.
 /// - Ordena del más reciente al más antiguo por fecha de creación.
 /// - Escapa comillas, separadores y saltos de línea según RFC 4180.
 /// - Usa fechas locales en formato `dd/MM/yyyy HH:mm`.

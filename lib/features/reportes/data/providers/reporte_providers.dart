@@ -42,7 +42,7 @@ final historialProvider = StreamProvider.autoDispose
 
 /// StreamProvider.family para TODOS los reportes (admin) con filtros opcionales.
 /// Filtros: [filtroEstado] (ej. 'Pendiente', 'En revision', 'En proceso',
-/// 'Solucionado', 'Rechazado', 'Todos') y [filtroEdificio] (ej. 'Edificio A', 'Todos').
+/// 'Solucionado', 'Todos') y [filtroEdificio] (ej. 'Edificio A', 'Todos').
 final todosLosReportesProvider = StreamProvider.autoDispose
     .family<List<Reporte>, ({String? filtroEstado, String? filtroEdificio})>((
       ref,
