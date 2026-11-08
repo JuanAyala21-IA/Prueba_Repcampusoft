@@ -45,6 +45,7 @@ String construirUbicacionTexto({
 class BorradorReporte {
   const BorradorReporte({
     required this.tipoUbicacion,
+    this.tipoUbicacionNombre,
     this.edificio,
     this.piso,
     required this.espacio,
@@ -55,6 +56,10 @@ class BorradorReporte {
   });
 
   final TipoEspacio tipoUbicacion;
+
+  /// Nombre visible del sitio elegido en el catálogo (puede ser un sitio
+  /// personalizado que no existe en [TipoEspacio]).
+  final String? tipoUbicacionNombre;
   final String? edificio;
   final String? piso;
 
@@ -91,6 +96,7 @@ class Reporte {
     required this.correoAutor,
     required this.tipoDano,
     required this.tipoUbicacion,
+    this.tipoUbicacionNombre,
     this.edificio,
     this.piso,
     required this.espacio,
@@ -114,6 +120,10 @@ class Reporte {
   final String correoAutor;
   final String tipoDano;
   final TipoEspacio tipoUbicacion;
+
+  /// Nombre visible del sitio del catálogo. Los reportes antiguos no lo tienen
+  /// y usan [TipoEspacio.etiqueta].
+  final String? tipoUbicacionNombre;
   final String? edificio;
   final String? piso;
 
@@ -182,6 +192,8 @@ class Reporte {
       'correoAutor': correoAutor,
       'tipoDano': tipoDano,
       'tipoUbicacion': tipoUbicacion.slug,
+      if (tipoUbicacionNombre != null && tipoUbicacionNombre!.trim().isNotEmpty)
+        'tipoUbicacionNombre': tipoUbicacionNombre!.trim(),
       if (edificio != null && edificio!.trim().isNotEmpty)
         'edificio': edificio!.trim(),
       if (piso != null && piso!.trim().isNotEmpty) 'piso': piso!.trim(),

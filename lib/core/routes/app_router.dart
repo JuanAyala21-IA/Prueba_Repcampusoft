@@ -231,7 +231,8 @@ String? redireccionPorSesion(Sesion sesion, String ruta) {
     case SesionEstado.rolAplicado:
       final RolEnum? rol = sesion.rol;
       final Set<String> permitidas = switch (rol) {
-        RolEnum.administrativo || RolEnum.mantenimiento => rutasGestion,
+        RolEnum.administrativo => rutasGestion,
+        RolEnum.mantenimiento => rutasMantenimiento,
         RolEnum.superadministrador => rutasSuperadministrador,
         _ => rutasPersona,
       };
@@ -278,6 +279,13 @@ const Set<String> rutasGestion = {
   AppRoutes.reportarFalla,
 };
 
+/// Mantenimiento comparte la gestión de reportes y además puede administrar
+/// los catálogos desde la ruta de reportar daños.
+const Set<String> rutasMantenimiento = {
+  ...rutasGestion,
+  AppRoutes.reportarDanos,
+};
+
 const Set<String> rutasSuperadministrador = {
   AppRoutes.inicioAdmin,
   AppRoutes.perfilAdmin,
@@ -291,4 +299,5 @@ const Set<String> rutasSuperadministrador = {
   AppRoutes.gestionUsuarios,
   AppRoutes.crearUsuario,
   AppRoutes.exportarReportes,
+  AppRoutes.reportarDanos,
 };

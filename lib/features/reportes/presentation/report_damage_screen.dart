@@ -8,8 +8,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/catalogo_edificios.dart';
 import '../../../core/constants/catalogo_espacios.dart';
-import '../../../core/constants/catalogo_tipos_dano.dart';
 import '../../../core/routes/app_router.dart';
+import '../../../core/routes/session_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/results.dart';
@@ -20,6 +20,10 @@ import '../../../shared/widgets/image_source_sheet.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/uts_header.dart';
 import '../data/comprimir_imagen.dart';
+import '../../catalogos/data/providers/catalogo_providers.dart';
+import '../../catalogos/domain/catalogos.dart';
+import '../../catalogos/presentation/catalogos_screen.dart';
+import '../../auth/domain/rol_enum.dart';
 import '../domain/reporte.dart';
 import '../domain/reporte_repository.dart';
 
@@ -47,7 +51,7 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
   final _referenciaCtrl = TextEditingController();
   final _descripcionCtrl = TextEditingController();
 
-  TipoEspacio? _tipoEspacio;
+  SitioReporteCatalogo? _sitio;
   String? _tipoDano;
   String? _edificio;
   String? _piso;
@@ -62,6 +66,21 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
   bool _enviando = false;
   bool _sinConexion = false;
 
+  TipoEspacio? get _tipoEspacio => _sitio?.tipoBase;
+  String? get _tipoEspecial => _sitio?.tipoEspecial;
+  bool get _requiereEdificio => _sitio?.esPersonalizado == true
+      ? _sitio!.requiereEdificio
+      : (_tipoEspacio?.requiereEdificio ?? false);
+  bool get _requierePiso => _sitio?.esPersonalizado == true
+      ? _sitio!.requierePiso
+      : (_tipoEspacio?.requierePiso ?? false);
+  bool get _muestraReferencia => _sitio?.esPersonalizado == true
+      ? _sitio!.muestraReferencia
+      : (_tipoEspacio?.muestraReferencia ?? false);
+  bool get _referenciaObligatoria => _sitio?.esPersonalizado == true
+      ? _sitio!.referenciaObligatoria
+      : (_tipoEspacio?.referenciaObligatoria ?? false);
+
   @override
   void dispose() {
     _espacioCtrl.dispose();
@@ -73,11 +92,11 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
   String? _obligatorio(String? v) =>
       (v == null || v.trim().isEmpty) ? 'Campo obligatorio' : null;
 
-  /// Al cambiar de tipo de espacio se limpian los campos del tipo anterior
-  /// para no guardar datos inconsistentes (p. ej. un baño con salón).
-  void _cambiarTipoEspacio(TipoEspacio? tipo) {
+  /// Al cambiar de sitio se limpian los campos del sitio anterior para no
+  /// guardar datos inconsistentes (p. ej. un baño con salón).
+  void _cambiarSitio(SitioReporteCatalogo? sitio) {
     setState(() {
-      _tipoEspacio = tipo;
+      _sitio = sitio;
       _tipoDano = null;
       _edificio = null;
       _piso = null;
@@ -91,36 +110,82 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
     });
   }
 
+  List<EdificioCatalogo> _edificiosActuales() =>
+      ref.read(edificiosCatalogoProvider).value ?? edificiosPorDefecto();
+
+  EdificioCatalogo? _edificioPorNombre(
+    List<EdificioCatalogo> edificios,
+    String? nombre,
+  ) {
+    for (final EdificioCatalogo edificio in edificios) {
+      if (edificio.nombre == nombre) return edificio;
+    }
+    return null;
+  }
+
+  List<String> _edificiosDisponibles(List<EdificioCatalogo> edificios) {
+    final List<String> todos = edificios
+        .where((EdificioCatalogo e) => e.activo)
+        .map((EdificioCatalogo e) => e.nombre)
+        .toList();
+    if (_tipoEspacio == TipoEspacio.salaComputo) {
+      return todos
+          .where((String n) => CatalogoEdificios.salasComputo.contains(n))
+          .toList();
+    }
+    if (_tipoEspacio == TipoEspacio.cafeteria) {
+      return todos
+          .where((String n) => CatalogoEdificios.cafeterias.contains(n))
+          .toList();
+    }
+    return todos;
+  }
+
+  List<String> _pisosDisponibles(List<EdificioCatalogo> edificios) {
+    if (_tipoEspacio == TipoEspacio.salaComputo) {
+      return CatalogoEspacios.pisosSalaComputo;
+    }
+    return _edificioPorNombre(edificios, _edificio)?.pisos ?? const <String>[];
+  }
+
+  List<String> _tramosDisponibles(List<EdificioCatalogo> edificios) {
+    final List<String> pisos = _pisosDisponibles(edificios);
+    return <String>[
+      for (int i = 1; i < pisos.length; i++) 'Piso $i a ${i + 1}',
+    ];
+  }
+
+  List<String> _pisosAscensor(List<EdificioCatalogo> edificios) {
+    return <String>[..._pisosDisponibles(edificios), 'Cabina', 'No aplica'];
+  }
+
   /// Ajusta los pisos disponibles al edificio elegido y limpia selecciones
   /// que dejan de ser válidas (p. ej. Piso 6 al pasar del Edificio A al C).
   void _cambiarEdificio(String? edificio) {
+    final List<EdificioCatalogo> edificios = _edificiosActuales();
     setState(() {
       _edificio = edificio;
-      if (!_pisosDisponibles.contains(_piso)) _piso = null;
-      if (!CatalogoEspacios.tramosEscalerasPara(edificio)
-          .contains(_tramoEscaleras)) {
+      if (!_pisosDisponibles(edificios).contains(_piso)) _piso = null;
+      if (!_tramosDisponibles(edificios).contains(_tramoEscaleras)) {
         _tramoEscaleras = null;
       }
-      if (!CatalogoEspacios.pisosAscensorPara(edificio)
-          .contains(_pisoAscensor)) {
+      if (!_pisosAscensor(edificios).contains(_pisoAscensor)) {
         _pisoAscensor = null;
       }
     });
   }
 
-  List<String> get _edificiosDisponibles => switch (_tipoEspacio) {
-    TipoEspacio.salaComputo => CatalogoEdificios.salasComputo,
-    TipoEspacio.cafeteria => CatalogoEdificios.cafeterias,
-    _ => CatalogoEdificios.valores,
-  };
-
-  List<String> get _pisosDisponibles => _tipoEspacio == TipoEspacio.salaComputo
-      ? CatalogoEspacios.pisosSalaComputo
-      : CatalogoEspacios.pisosPara(_edificio);
-
   bool get _muestraEspacioTexto {
     final tipo = _tipoEspacio;
     if (tipo == null) return false;
+    if (_sitio?.esPersonalizado == true) {
+      return !<String?>[
+        'bano',
+        'escaleras',
+        'ascensor',
+        'zona_exterior',
+      ].contains(_tipoEspecial);
+    }
     return tipo == TipoEspacio.aula ||
         tipo == TipoEspacio.laboratorio ||
         tipo == TipoEspacio.salaComputo ||
@@ -130,43 +195,56 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
         tipo == TipoEspacio.otro;
   }
 
-  String get _etiquetaEspacio => switch (_tipoEspacio!) {
-    TipoEspacio.aula => 'Salón',
-    TipoEspacio.laboratorio => 'Laboratorio',
-    TipoEspacio.salaComputo => 'Sala de cómputo',
-    TipoEspacio.oficina => 'Dependencia',
-    TipoEspacio.auditorio => 'Nombre del auditorio',
-    TipoEspacio.biblioteca => 'Zona de la biblioteca',
-    TipoEspacio.otro => 'Descripción de la ubicación',
-    _ => 'Ubicación',
-  };
+  String get _etiquetaEspacio {
+    if (_sitio?.esPersonalizado == true) return 'Detalle del sitio';
+    return switch (_tipoEspacio!) {
+      TipoEspacio.aula => 'Salón',
+      TipoEspacio.laboratorio => 'Laboratorio',
+      TipoEspacio.salaComputo => 'Sala de cómputo',
+      TipoEspacio.oficina => 'Dependencia',
+      TipoEspacio.auditorio => 'Nombre del auditorio',
+      TipoEspacio.biblioteca => 'Zona de la biblioteca',
+      TipoEspacio.otro => 'Descripción de la ubicación',
+      _ => 'Ubicación',
+    };
+  }
 
-  String get _hintEspacio => switch (_tipoEspacio!) {
-    TipoEspacio.aula => 'Ej. 203',
-    TipoEspacio.laboratorio => 'Ej. Laboratorio de Química',
-    TipoEspacio.salaComputo => 'Ej. Sala de cómputo 305',
-    TipoEspacio.oficina => 'Ej. Registro y Control',
-    TipoEspacio.auditorio => 'Ej. Auditorio principal',
-    TipoEspacio.biblioteca => 'Ej. Sala de lectura',
-    TipoEspacio.otro => 'Ej. Pasillo técnico detrás de la cafetería',
-    _ => 'Describe el espacio',
-  };
+  String get _hintEspacio {
+    if (_sitio?.esPersonalizado == true) {
+      return 'Ej. Salón 501, oficina 2, bloque norte';
+    }
+    return switch (_tipoEspacio!) {
+      TipoEspacio.aula => 'Ej. 203',
+      TipoEspacio.laboratorio => 'Ej. Laboratorio de Química',
+      TipoEspacio.salaComputo => 'Ej. Sala de cómputo 305',
+      TipoEspacio.oficina => 'Ej. Registro y Control',
+      TipoEspacio.auditorio => 'Ej. Auditorio principal',
+      TipoEspacio.biblioteca => 'Ej. Sala de lectura',
+      TipoEspacio.otro => 'Ej. Pasillo técnico detrás de la cafetería',
+      _ => 'Describe el espacio',
+    };
+  }
 
-  String get _hintReferencia => switch (_tipoEspacio!) {
-    TipoEspacio.aula => 'Ej. Ala norte, junto al laboratorio 2',
-    TipoEspacio.laboratorio => 'Ej. Junto a la ventana o al tablero',
-    TipoEspacio.salaComputo => 'Ej. Junto a la puerta o al tablero',
-    TipoEspacio.bano => 'Ej. Junto a las escaleras',
-    TipoEspacio.pasillo => 'Ej. Entre las aulas 201 y 203',
-    TipoEspacio.oficina => 'Ej. Segundo piso, ala oriental',
-    TipoEspacio.auditorio => 'Ej. Platea, escenario o cabina',
-    TipoEspacio.biblioteca => 'Ej. Segundo piso, junto a la hemeroteca',
-    TipoEspacio.escaleras => 'Ej. Escaleras del ala norte',
-    TipoEspacio.ascensor => 'Ej. Frente a la recepción',
-    TipoEspacio.zonaExterior => 'Ej. Frente al Edificio B',
-    TipoEspacio.parqueadero => 'Ej. Cerca de la entrada o puesto 45',
-    _ => 'Ej. Junto a la entrada',
-  };
+  String get _hintReferencia {
+    if (_sitio?.esPersonalizado == true) {
+      return 'Ej. Frente a la entrada, junto a la cafetería';
+    }
+    return switch (_tipoEspacio!) {
+      TipoEspacio.aula => 'Ej. Ala norte, junto al laboratorio 2',
+      TipoEspacio.laboratorio => 'Ej. Junto a la ventana o al tablero',
+      TipoEspacio.salaComputo => 'Ej. Junto a la puerta o al tablero',
+      TipoEspacio.bano => 'Ej. Junto a las escaleras',
+      TipoEspacio.pasillo => 'Ej. Entre las aulas 201 y 203',
+      TipoEspacio.oficina => 'Ej. Segundo piso, ala oriental',
+      TipoEspacio.auditorio => 'Ej. Platea, escenario o cabina',
+      TipoEspacio.biblioteca => 'Ej. Segundo piso, junto a la hemeroteca',
+      TipoEspacio.escaleras => 'Ej. Escaleras del ala norte',
+      TipoEspacio.ascensor => 'Ej. Frente a la recepción',
+      TipoEspacio.zonaExterior => 'Ej. Frente al Edificio B',
+      TipoEspacio.parqueadero => 'Ej. Cerca de la entrada o puesto 45',
+      _ => 'Ej. Junto a la entrada',
+    };
+  }
 
   String get _espacioBano {
     final genero = _generoBano!;
@@ -181,8 +259,18 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
   }
 
   String get _espacioParaGuardar {
-    final tipo = _tipoEspacio!;
-    final texto = _espacioCtrl.text.trim();
+    final String texto = _espacioCtrl.text.trim();
+    if (_sitio?.esPersonalizado == true) {
+      return switch (_tipoEspecial) {
+        'bano' => _espacioBano,
+        'escaleras' => 'Escaleras',
+        'ascensor' =>
+          'Ascensor ${_ascensor!.replaceFirst('Ascensor ', '').toLowerCase()}',
+        'zona_exterior' => _zonaExterior!,
+        _ => texto.isEmpty ? _sitio!.nombre : texto,
+      };
+    }
+    final TipoEspacio tipo = _tipoEspacio!;
     return switch (tipo) {
       TipoEspacio.aula => _conPrefijoSalon(texto),
       TipoEspacio.laboratorio => texto,
@@ -205,24 +293,21 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
   }
 
   String? get _edificioParaGuardar {
-    final tipo = _tipoEspacio!;
-    return (tipo.requiereEdificio || tipo == TipoEspacio.otro)
+    return (_requiereEdificio || _tipoEspacio == TipoEspacio.otro)
         ? _edificio
         : null;
   }
 
   String? get _pisoParaGuardar {
-    final tipo = _tipoEspacio!;
-    if (tipo == TipoEspacio.escaleras) return _tramoEscaleras;
-    if (tipo == TipoEspacio.ascensor) return _pisoAscensor;
-    if (tipo == TipoEspacio.otro) return _piso;
-    return tipo.requierePiso ? _piso : null;
+    if (_tipoEspecial == 'escaleras') return _tramoEscaleras;
+    if (_tipoEspecial == 'ascensor') return _pisoAscensor;
+    if (_requierePiso || _tipoEspacio == TipoEspacio.otro) return _piso;
+    return null;
   }
 
   String? get _referenciaParaGuardar {
-    final tipo = _tipoEspacio!;
-    if (!tipo.muestraReferencia) return null;
-    final referencia = _referenciaCtrl.text.trim();
+    if (!_muestraReferencia) return null;
+    final String referencia = _referenciaCtrl.text.trim();
     return referencia.isEmpty ? null : referencia;
   }
 
@@ -241,7 +326,7 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
       if (mounted) setState(() => _procesandoFoto = false);
       return;
     }
-    // Compresión equilibrada: máx. 1280 px y ~150–250 KB
+    // Compresión equilibrada: máx. 1280 px y ~150�?"250 KB
     // (ver data/comprimir_imagen.dart).
     Uint8List comprimida;
     try {
@@ -270,8 +355,8 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
   Future<void> _enviar() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final tipo = _tipoEspacio;
-    if (tipo == null || _tipoDano == null) {
+    final SitioReporteCatalogo? sitio = _sitio;
+    if (sitio == null || _tipoDano == null) {
       _mostrarAviso('Completa la ubicación y el tipo de daño.');
       return;
     }
@@ -293,7 +378,8 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
           .read(reporteRepositoryProvider)
           .crear(
             BorradorReporte(
-              tipoUbicacion: tipo,
+              tipoUbicacion: sitio.tipoBase,
+              tipoUbicacionNombre: sitio.nombre,
               edificio: _edificioParaGuardar,
               piso: _pisoParaGuardar,
               espacio: _espacioParaGuardar,
@@ -345,6 +431,32 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final Sesion sesion = ref.watch(sesionProvider);
+    if (sesion.rol == RolEnum.mantenimiento ||
+        sesion.rol == RolEnum.superadministrador) {
+      return const CatalogosScreen();
+    }
+    final List<EdificioCatalogo> edificios =
+        ref.watch(edificiosCatalogoProvider).value ?? edificiosPorDefecto();
+    final List<SitioReporteCatalogo> sitios =
+        (ref.watch(sitiosCatalogoProvider).value ?? sitiosPorDefecto())
+            .where((SitioReporteCatalogo s) => s.activo)
+            .toList();
+    final List<String> tiposDano =
+        (ref.watch(tiposDanoCatalogoProvider).value ?? tiposDanoPorDefecto())
+            .where((TipoDanoCatalogo t) => t.activo)
+            .map((TipoDanoCatalogo t) => t.nombre)
+            .toList();
+    final List<String> zonas =
+        (ref.watch(zonasCatalogoProvider).value ?? zonasPorDefecto())
+            .where((ZonaExteriorCatalogo z) => z.activo)
+            .map((ZonaExteriorCatalogo z) => z.nombre)
+            .toList();
+    final List<String> edificiosDisponibles = _edificiosDisponibles(edificios);
+    final List<String> pisosDisponibles = _pisosDisponibles(edificios);
+    final List<String> tramosDisponibles = _tramosDisponibles(edificios);
+    final List<String> pisosAscensor = _pisosAscensor(edificios);
+
     return Scaffold(
       body: CurvedGreenBackground(
         child: SafeArea(
@@ -386,72 +498,67 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
                   const SizedBox(height: 4),
                   _CampoCatalogo(
                     etiqueta: '¿Dónde ocurrió?',
-                    valores: TipoEspacio.values
-                        .where((tipo) => tipo.seleccionable)
-                        .map((tipo) => tipo.etiqueta)
+                    valores: sitios
+                        .map((SitioReporteCatalogo s) => s.nombre)
                         .toList(),
-                    valor: _tipoEspacio?.etiqueta,
-                    onChanged: (etiqueta) {
-                      if (etiqueta == null) {
-                        _cambiarTipoEspacio(null);
+                    valor: _sitio?.nombre,
+                    onChanged: (nombre) {
+                      if (nombre == null) {
+                        _cambiarSitio(null);
                         return;
                       }
-                      final tipo = TipoEspacio.values.firstWhere(
-                        (tipo) => tipo.etiqueta == etiqueta,
+                      final SitioReporteCatalogo sitio = sitios.firstWhere(
+                        (SitioReporteCatalogo s) => s.nombre == nombre,
                       );
-                      _cambiarTipoEspacio(tipo);
+                      _cambiarSitio(sitio);
                     },
                     validator: _obligatorio,
                   ),
-                  if (_tipoEspacio != null) ...[
+                  if (_sitio != null) ...[
                     const SizedBox(height: 18),
                     // La clave reinicia los campos condicionales cuando cambia
-                    // el tipo de espacio, evitando valores arrastrados.
+                    // el sitio, evitando valores arrastrados.
                     KeyedSubtree(
-                      key: ValueKey(_tipoEspacio!.slug),
+                      key: ValueKey(_sitio!.id),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (_tipoEspacio!.requiereEdificio ||
+                          if (_requiereEdificio ||
                               _tipoEspacio == TipoEspacio.otro) ...[
                             _CampoCatalogo(
-                              etiqueta: _tipoEspacio == TipoEspacio.otro
-                                  ? 'Edificio (opcional)'
-                                  : 'Edificio',
-                              valores: _edificiosDisponibles,
+                              etiqueta: _requiereEdificio
+                                  ? 'Edificio'
+                                  : 'Edificio (opcional)',
+                              valores: edificiosDisponibles,
                               valor: _edificio,
                               onChanged: _cambiarEdificio,
-                              validator: _tipoEspacio!.requiereEdificio
+                              validator: _requiereEdificio
                                   ? _obligatorio
                                   : null,
                             ),
                             const SizedBox(height: 18),
                           ],
-                          if ((_tipoEspacio!.requierePiso ||
+                          if ((_requierePiso ||
                                   _tipoEspacio == TipoEspacio.otro) &&
                               _edificio != null) ...[
                             _CampoCatalogo(
                               key: ValueKey('piso-${_edificio ?? ''}'),
-                              etiqueta: _tipoEspacio == TipoEspacio.otro
-                                  ? 'Piso (opcional)'
-                                  : 'Piso',
-                              valores: _pisosDisponibles,
+                              etiqueta: _requierePiso
+                                  ? 'Piso'
+                                  : 'Piso (opcional)',
+                              valores: pisosDisponibles,
                               valor: _piso,
                               onChanged: (v) => setState(() => _piso = v),
-                              validator: _tipoEspacio!.requierePiso
-                                  ? _obligatorio
-                                  : null,
+                              validator: _requierePiso ? _obligatorio : null,
                             ),
                             const SizedBox(height: 18),
                           ],
-                          if (_tipoEspacio == TipoEspacio.escaleras &&
+                          if (_tipoEspecial == 'escaleras' &&
                               _edificio != null) ...[
                             _CampoCatalogo(
                               key: ValueKey('tramo-${_edificio ?? ''}'),
                               etiqueta: 'Tramo',
-                              valores: CatalogoEspacios.tramosEscalerasPara(
-                                _edificio,
-                              ),
+                              valores: tramosDisponibles,
                               valor: _tramoEscaleras,
                               onChanged: (v) =>
                                   setState(() => _tramoEscaleras = v),
@@ -459,7 +566,7 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
                             ),
                             const SizedBox(height: 18),
                           ],
-                          if (_tipoEspacio == TipoEspacio.ascensor &&
+                          if (_tipoEspecial == 'ascensor' &&
                               _edificio != null) ...[
                             _CampoCatalogo(
                               etiqueta: 'Ascensor',
@@ -472,9 +579,7 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
                             _CampoCatalogo(
                               key: ValueKey('piso-ascensor-${_edificio ?? ''}'),
                               etiqueta: 'Piso / cabina',
-                              valores: CatalogoEspacios.pisosAscensorPara(
-                                _edificio,
-                              ),
+                              valores: pisosAscensor,
                               valor: _pisoAscensor,
                               onChanged: (v) =>
                                   setState(() => _pisoAscensor = v),
@@ -482,7 +587,7 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
                             ),
                             const SizedBox(height: 18),
                           ],
-                          if (_tipoEspacio == TipoEspacio.bano) ...[
+                          if (_tipoEspecial == 'bano') ...[
                             _CampoCatalogo(
                               etiqueta: 'Baño',
                               valores: CatalogoEspacios.generosBano,
@@ -501,10 +606,10 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
                             ),
                             const SizedBox(height: 18),
                           ],
-                          if (_tipoEspacio == TipoEspacio.zonaExterior) ...[
+                          if (_tipoEspecial == 'zona_exterior') ...[
                             _CampoCatalogo(
                               etiqueta: 'Zona',
-                              valores: CatalogoEspacios.zonasExteriores,
+                              valores: zonas,
                               valor: _zonaExterior,
                               onChanged: (v) =>
                                   setState(() => _zonaExterior = v),
@@ -512,14 +617,14 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
                             ),
                             const SizedBox(height: 18),
                           ],
-                          if (_tipoEspacio!.muestraReferencia) ...[
+                          if (_muestraReferencia) ...[
                             LabelledField(
                               controlador: _referenciaCtrl,
-                              etiqueta: _tipoEspacio!.referenciaObligatoria
+                              etiqueta: _referenciaObligatoria
                                   ? 'Referencia'
                                   : 'Referencia (opcional)',
                               hint: _hintReferencia,
-                              validator: _tipoEspacio!.referenciaObligatoria
+                              validator: _referenciaObligatoria
                                   ? _obligatorio
                                   : null,
                             ),
@@ -527,7 +632,7 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
                           ],
                           _CampoCatalogo(
                             etiqueta: 'Tipo de daño',
-                            valores: CatalogoTiposDano.para(_tipoEspacio),
+                            valores: tiposDano,
                             valor: _tipoDano,
                             onChanged: (v) => setState(() => _tipoDano = v),
                             validator: _obligatorio,

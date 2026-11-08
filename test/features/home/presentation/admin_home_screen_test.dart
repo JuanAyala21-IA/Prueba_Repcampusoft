@@ -178,7 +178,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byType(DashboardTile), findsNWidgets(6));
+      expect(find.byType(DashboardTile), findsNWidgets(7));
       final finder = find.widgetWithText(
         DashboardTile,
         'Descargar reportes (CSV)',

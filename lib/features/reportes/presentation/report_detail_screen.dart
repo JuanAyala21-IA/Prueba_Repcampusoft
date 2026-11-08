@@ -211,7 +211,9 @@ class _DetalleReporte extends StatelessWidget {
                 const SizedBox(height: 16),
                 _DatoFila(
                   etiqueta: 'Tipo de espacio:',
-                  valor: reporte.tipoUbicacion.etiqueta,
+                  valor:
+                      reporte.tipoUbicacionNombre ??
+                      reporte.tipoUbicacion.etiqueta,
                 ),
                 if (reporte.edificio != null)
                   _DatoFila(etiqueta: 'Edificio:', valor: reporte.edificio!),

@@ -147,6 +147,7 @@ void main() {
           AppRoutes.editarPerfil,
           AppRoutes.cambiarContrasena,
           AppRoutes.reportarFalla,
+          if (rol == RolEnum.mantenimiento) AppRoutes.reportarDanos,
         ]) {
           expect(redireccionPorSesion(sesion, ruta), isNull, reason: ruta);
         }
@@ -160,7 +161,7 @@ void main() {
           AppRoutes.exportarReportes,
           AppRoutes.fallasApp,
           AppRoutes.inicioEstudiante,
-          AppRoutes.reportarDanos,
+          if (rol == RolEnum.administrativo) AppRoutes.reportarDanos,
         ]) {
           expect(
             redireccionPorSesion(sesion, ruta),
@@ -186,6 +187,7 @@ void main() {
         AppRoutes.gestionUsuarios,
         AppRoutes.crearUsuario,
         AppRoutes.exportarReportes,
+        AppRoutes.reportarDanos,
         AppRoutes.editarPerfil,
         AppRoutes.cambiarContrasena,
         AppRoutes.reportarFalla,
@@ -197,7 +199,6 @@ void main() {
     test('no accede a los módulos de estudiante', () {
       for (final ruta in [
         AppRoutes.inicioEstudiante,
-        AppRoutes.reportarDanos,
         AppRoutes.misReportes,
         AppRoutes.notificacionesEstudiante,
       ]) {

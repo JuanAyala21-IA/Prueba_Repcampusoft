@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:repcampusoft/core/constants/catalogo_espacios.dart';
+import 'package:repcampusoft/core/routes/session_provider.dart';
 import 'package:repcampusoft/core/utils/results.dart';
+import 'package:repcampusoft/features/auth/domain/rol_enum.dart';
 import 'package:repcampusoft/features/reportes/domain/historial_entry.dart';
 import 'package:repcampusoft/features/reportes/domain/reporte.dart';
 import 'package:repcampusoft/features/reportes/domain/reporte_repository.dart';
@@ -67,12 +69,22 @@ class FakeSonda implements SondaConectividad {
   }
 }
 
+class _SesionPersonaFake extends SesionController {
+  @override
+  Sesion build() => Sesion.rolAplicado(
+    uid: 'autor-uid',
+    correo: 'autor@uts.edu.co',
+    rol: RolEnum.persona,
+  );
+}
+
 Widget createTestWidget({
   required ReporteRepository repo,
   required SondaConectividad sonda,
 }) {
   return ProviderScope(
     overrides: [
+      sesionProvider.overrideWith(_SesionPersonaFake.new),
       reporteRepositoryProvider.overrideWith((_) => repo),
       sondaConectividadProvider.overrideWith((_) => sonda),
     ],
@@ -303,7 +315,9 @@ void main() {
       expect(find.text('Campo obligatorio'), findsOneWidget);
     });
 
-    testWidgets('8a. Baño muestra daños de baño y no de aula', (tester) async {
+    testWidgets('8a. Baño muestra los daños globales del catálogo', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(repo: FakeRepo(), sonda: FakeSonda()),
       );
@@ -319,11 +333,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Sanitario dañado'), findsWidgets);
-      expect(find.text('Silla dañada'), findsNothing);
+      expect(find.text('Silla dañada'), findsWidgets);
     });
 
-    testWidgets('8b. Aula muestra daños de aula y no de baño', (tester) async {
+    testWidgets('8b. Aula muestra los daños globales del catálogo', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(repo: FakeRepo(), sonda: FakeSonda()),
       );
@@ -340,7 +355,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Silla dañada'), findsWidgets);
-      expect(find.text('Sanitario dañado'), findsNothing);
     });
 
     testWidgets('9. Repo devuelve Failure: muestra SnackBar y apaga cargando', (
@@ -515,16 +529,7 @@ void main() {
       expect(find.text('Zona'), findsNothing);
       expect(find.text('Referencia (opcional)'), findsOneWidget);
 
-      final dropdowns = find.byType(DropdownButtonFormField<String>);
-      await tester.ensureVisible(dropdowns.at(1));
-      await tester.pumpAndSettle();
-      await tester.tap(dropdowns.at(1), warnIfMissed: false);
-      await tester.pumpAndSettle();
-      expect(find.text('Señalización'), findsWidgets);
-      expect(find.text('Barrera / portón'), findsNothing);
-
-      await tester.tap(find.text('Señalización').last, warnIfMissed: false);
-      await tester.pumpAndSettle();
+      await _seleccionar(tester, 1, 'Señalización');
       await _escribir(tester, 'Referencia (opcional)', 'Cerca de la entrada');
       await _escribir(tester, 'Descripción', 'Señal caída');
       await _enviar(tester);

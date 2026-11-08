@@ -164,4 +164,18 @@ abstract final class CatalogoTiposDano {
     if (tipo == null) return _genericos;
     return _porEspacio[tipo] ?? _genericos;
   }
+
+  /// Lista única de todos los tipos de daño del catálogo local.
+  ///
+  /// Se usa para sembrar el catálogo dinámico en Firestore, donde los tipos
+  /// quedan disponibles para todos los sitios.
+  static List<String> todos() {
+    final List<String> valores = <String>[..._genericos];
+    for (final List<String> lista in _porEspacio.values) {
+      for (final String valor in lista) {
+        if (!valores.contains(valor)) valores.add(valor);
+      }
+    }
+    return valores;
+  }
 }

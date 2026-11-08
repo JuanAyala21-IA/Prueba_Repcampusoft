@@ -68,6 +68,11 @@ service cloud.firestore {
       return isAdministrativo() || isMantenimiento();
     }
 
+    // Mantenimiento y superadministrador administran los catálogos dinámicos.
+    function canManageCatalogos() {
+      return isMantenimiento() || isSuperadministrador();
+    }
+
     function isAllowedStateTransition(current, next) {
       return (current == 'Pendiente' && next == 'En revision')
           || (current == 'En revision' && next == 'En proceso')
@@ -168,6 +173,31 @@ service cloud.firestore {
 
         allow delete: if false;
       }
+    }
+
+    // ============ CATÁLOGOS DE REPORTES ============
+    match /catalogos_edificios/{catalogoId} {
+      allow read: if isAuthenticated();
+      allow create, update: if canManageCatalogos();
+      allow delete: if false;
+    }
+
+    match /catalogos_sitios/{catalogoId} {
+      allow read: if isAuthenticated();
+      allow create, update: if canManageCatalogos();
+      allow delete: if false;
+    }
+
+    match /catalogos_danos/{catalogoId} {
+      allow read: if isAuthenticated();
+      allow create, update: if canManageCatalogos();
+      allow delete: if false;
+    }
+
+    match /catalogos_zonas/{catalogoId} {
+      allow read: if isAuthenticated();
+      allow create, update: if canManageCatalogos();
+      allow delete: if false;
     }
 
     // ============ REPORTES ============

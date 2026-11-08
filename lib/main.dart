@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 
 import 'app.dart';
+import 'features/catalogos/data/providers/catalogo_providers.dart';
 import 'features/notificaciones/data/providers/notificacion_providers.dart';
 import 'features/notificaciones/data/push_notification_service.dart';
 import 'features/reportes/data/providers/reporte_providers.dart';
@@ -19,7 +20,11 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      overrides: <Override>[...reportesOverrides, ...notificacionesOverrides],
+      overrides: <Override>[
+        ...reportesOverrides,
+        ...notificacionesOverrides,
+        ...catalogosOverrides,
+      ],
       child: RepcampusoftApp(),
     ),
   );

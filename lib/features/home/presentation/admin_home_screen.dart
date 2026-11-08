@@ -152,6 +152,12 @@ class AdminHomeScreen extends ConsumerWidget {
                           onTap: () =>
                               context.push(AppRoutes.misReportesAsignados),
                         ),
+                      if (esMantenimiento || esSuperadministrador)
+                        DashboardTile(
+                          icono: Icons.category_outlined,
+                          titulo: 'Catálogos de reportes',
+                          onTap: () => context.push(AppRoutes.reportarDanos),
+                        ),
                       DashboardTile(
                         icono: Icons.campaign_outlined,
                         titulo: 'Daño y gestión de reportes',

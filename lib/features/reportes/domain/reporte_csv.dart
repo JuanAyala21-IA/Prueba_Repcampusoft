@@ -63,7 +63,7 @@ String generarCsvReportes(List<Reporte> reportes, {DateTime? ahora}) {
       _fecha(reporte.actualizadoEn),
       reporte.estado.nombre,
       reporte.tipoDano,
-      reporte.tipoUbicacion.etiqueta,
+      reporte.tipoUbicacionNombre ?? reporte.tipoUbicacion.etiqueta,
       reporte.edificio ?? '',
       reporte.piso ?? '',
       reporte.espacio,

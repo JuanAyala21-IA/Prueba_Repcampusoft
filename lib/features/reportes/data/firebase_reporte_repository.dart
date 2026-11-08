@@ -92,6 +92,9 @@ class FirebaseReporteRepository implements ReporteRepository {
       'correoAutor': correoAutor,
       'tipoDano': borrador.tipoDano,
       'tipoUbicacion': borrador.tipoUbicacion.slug,
+      if (borrador.tipoUbicacionNombre != null &&
+          borrador.tipoUbicacionNombre!.trim().isNotEmpty)
+        'tipoUbicacionNombre': borrador.tipoUbicacionNombre!.trim(),
       if (borrador.edificio != null && borrador.edificio!.trim().isNotEmpty)
         'edificio': borrador.edificio!.trim(),
       if (borrador.piso != null && borrador.piso!.trim().isNotEmpty)
@@ -568,6 +571,7 @@ class FirebaseReporteRepository implements ReporteRepository {
       tipoUbicacion:
           TipoEspacio.desdeSlug(data['tipoUbicacion'] as String?) ??
           TipoEspacio.aula,
+      tipoUbicacionNombre: data['tipoUbicacionNombre'] as String?,
       edificio: data['edificio'] as String?,
       piso: data['piso'] as String?,
       espacio: espacio,
