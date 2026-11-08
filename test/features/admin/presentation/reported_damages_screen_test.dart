@@ -117,6 +117,16 @@ void main() {
     }
 
     // Test simple sin filtros - verifica que se renderiza correctamente
+    // Helper: usa una pantalla alta para que ListView construya más tarjetas.
+    void usarPantallaAlta(WidgetTester tester) {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+    }
+
     testWidgets('superadministrador ve el botón para descargar el CSV', (
       tester,
     ) async {
@@ -156,6 +166,7 @@ void main() {
     testWidgets('sin filtros: muestra reportes con StatusBadge correcto', (
       tester,
     ) async {
+      usarPantallaAlta(tester);
       final reportes = crearReportes();
 
       await tester.pumpWidget(createTestWidget(reportes: reportes));
@@ -177,208 +188,77 @@ void main() {
       expect(estados.contains('Solucionado'), isTrue);
     });
 
-    // Test: tap en chip 'Pendientes' pasa filtro 'Pendiente' (singular) al provider
-    testWidgets(
-      'tap en chip Pendientes pasa filtro "Pendiente" (singular) al provider',
-      (tester) async {
-        final reportes = crearReportes();
+    // Test: el chip 'Pendientes' filtra en memoria y solo deja pendientes.
+    testWidgets('tap en chip Pendientes muestra solo reportes pendientes', (
+      tester,
+    ) async {
+      usarPantallaAlta(tester);
+      await tester.pumpWidget(createTestWidget(reportes: crearReportes()));
+      await tester.pump();
 
-        // Capturar el filtro que se pasa al provider
-        ({String? filtroEstado, String? filtroEdificio})? capturedFilters;
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Pendientes'));
+      await tester.pump();
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              sesionProvider.overrideWith(
-                () =>
-                    _SesionFake(rol: RolEnum.administrativo, uid: 'admin-uid'),
-              ),
-              todosLosReportesProvider.overrideWith((ref, filtros) {
-                capturedFilters = filtros;
-                return Stream.value(reportes);
-              }),
-            ],
-            child: MaterialApp.router(
-              routerConfig: GoRouter(
-                initialLocation: AppRoutes.danosReportados,
-                routes: [
-                  GoRoute(
-                    path: AppRoutes.danosReportados,
-                    builder: (_, _) => const ReportedDamagesScreen(),
-                  ),
-                  GoRoute(
-                    path: AppRoutes.gestionReporte,
-                    builder: (_, _) => const SizedBox.shrink(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
+      expect(find.text('Silla dañada'), findsOneWidget);
+      expect(find.text('Banca dañada'), findsOneWidget);
+      expect(find.text('Lámpara averiada'), findsNothing);
+      expect(find.text('Puerta dañada'), findsNothing);
+    });
 
-        // Tap en chip "Pendientes"
-        await tester.tap(find.widgetWithText(ChoiceChip, 'Pendientes'));
-        await tester.pump();
+    // Test: el chip 'Solucionados' filtra en memoria y solo deja solucionados.
+    testWidgets('tap en chip Solucionados muestra solo solucionados', (
+      tester,
+    ) async {
+      usarPantallaAlta(tester);
+      await tester.pumpWidget(createTestWidget(reportes: crearReportes()));
+      await tester.pump();
 
-        // Verificar que el filtro pasado al provider es 'Pendiente' (singular)
-        expect(capturedFilters, isNotNull);
-        expect(capturedFilters!.filtroEstado, 'Pendiente');
-        expect(capturedFilters!.filtroEstado, isNot('Pendientes'));
-      },
-    );
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Solucionados'));
+      await tester.pump();
 
-    // Test: tap en chip 'Solucionados' pasa filtro 'Solucionado' (singular) al provider
-    testWidgets(
-      'tap en chip Solucionados pasa filtro "Solucionado" (singular) al provider',
-      (tester) async {
-        final reportes = crearReportes();
+      expect(find.text('Puerta dañada'), findsOneWidget);
+      expect(find.text('Silla dañada'), findsNothing);
+      expect(find.text('Lámpara averiada'), findsNothing);
+      expect(find.text('Banca dañada'), findsNothing);
+    });
 
-        ({String? filtroEstado, String? filtroEdificio})? capturedFilters;
+    // Test: el chip 'En revisión' filtra en memoria.
+    testWidgets('tap en chip En revisión muestra solo reportes en revisión', (
+      tester,
+    ) async {
+      usarPantallaAlta(tester);
+      await tester.pumpWidget(createTestWidget(reportes: crearReportes()));
+      await tester.pump();
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              sesionProvider.overrideWith(
-                () =>
-                    _SesionFake(rol: RolEnum.administrativo, uid: 'admin-uid'),
-              ),
-              todosLosReportesProvider.overrideWith((ref, filtros) {
-                capturedFilters = filtros;
-                return Stream.value(reportes);
-              }),
-            ],
-            child: MaterialApp.router(
-              routerConfig: GoRouter(
-                initialLocation: AppRoutes.danosReportados,
-                routes: [
-                  GoRoute(
-                    path: AppRoutes.danosReportados,
-                    builder: (_, _) => const ReportedDamagesScreen(),
-                  ),
-                  GoRoute(
-                    path: AppRoutes.gestionReporte,
-                    builder: (_, _) => const SizedBox.shrink(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'En revisión'));
+      await tester.pump();
 
-        // Tap en chip "Solucionados"
-        await tester.tap(find.widgetWithText(ChoiceChip, 'Solucionados'));
-        await tester.pump();
+      expect(find.text('Lámpara averiada'), findsOneWidget);
+      expect(find.text('Silla dañada'), findsNothing);
+      expect(find.text('Puerta dañada'), findsNothing);
+      expect(find.text('Banca dañada'), findsNothing);
+    });
 
-        // Verificar que el filtro pasado es 'Solucionado' (singular)
-        expect(capturedFilters, isNotNull);
-        expect(capturedFilters!.filtroEstado, 'Solucionado');
-        expect(capturedFilters!.filtroEstado, isNot('Solucionados'));
-      },
-    );
+    // Test: el chip 'Todos' limpia el filtro de estado.
+    testWidgets('tap en chip Todos vuelve a mostrar todos los reportes', (
+      tester,
+    ) async {
+      usarPantallaAlta(tester);
+      await tester.pumpWidget(createTestWidget(reportes: crearReportes()));
+      await tester.pump();
 
-    // Test: tap en chip 'En revisión' pasa filtro 'En revision' al provider
-    testWidgets(
-      'tap en chip En revisión pasa filtro "En revision" al provider',
-      (tester) async {
-        final reportes = crearReportes();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Pendientes'));
+      await tester.pump();
+      expect(find.text('Lámpara averiada'), findsNothing);
 
-        ({String? filtroEstado, String? filtroEdificio})? capturedFilters;
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Todos'));
+      await tester.pump();
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              sesionProvider.overrideWith(
-                () =>
-                    _SesionFake(rol: RolEnum.administrativo, uid: 'admin-uid'),
-              ),
-              todosLosReportesProvider.overrideWith((ref, filtros) {
-                capturedFilters = filtros;
-                return Stream.value(reportes);
-              }),
-            ],
-            child: MaterialApp.router(
-              routerConfig: GoRouter(
-                initialLocation: AppRoutes.danosReportados,
-                routes: [
-                  GoRoute(
-                    path: AppRoutes.danosReportados,
-                    builder: (_, _) => const ReportedDamagesScreen(),
-                  ),
-                  GoRoute(
-                    path: AppRoutes.gestionReporte,
-                    builder: (_, _) => const SizedBox.shrink(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
-
-        // Tap en chip "En revisión"
-        await tester.tap(find.widgetWithText(ChoiceChip, 'En revisión'));
-        await tester.pump();
-
-        // Verificar que el filtro pasado es 'En revision' (sin tilde, como en Firestore)
-        expect(capturedFilters, isNotNull);
-        expect(capturedFilters!.filtroEstado, 'En revision');
-      },
-    );
-
-    // Test: tap en chip 'Todos' resetea filtroEstado a 'Todos' en el provider
-    testWidgets(
-      'tap en chip Todos resetea filtroEstado a "Todos" en el provider',
-      (tester) async {
-        final reportes = crearReportes();
-
-        ({String? filtroEstado, String? filtroEdificio})? capturedFilters;
-
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              sesionProvider.overrideWith(
-                () =>
-                    _SesionFake(rol: RolEnum.administrativo, uid: 'admin-uid'),
-              ),
-              todosLosReportesProvider.overrideWith((ref, filtros) {
-                capturedFilters = filtros;
-                return Stream.value(reportes);
-              }),
-            ],
-            child: MaterialApp.router(
-              routerConfig: GoRouter(
-                initialLocation: AppRoutes.danosReportados,
-                routes: [
-                  GoRoute(
-                    path: AppRoutes.danosReportados,
-                    builder: (_, _) => const ReportedDamagesScreen(),
-                  ),
-                  GoRoute(
-                    path: AppRoutes.gestionReporte,
-                    builder: (_, _) => const SizedBox.shrink(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
-
-        // Primero filtrar por Pendientes
-        await tester.tap(find.widgetWithText(ChoiceChip, 'Pendientes'));
-        await tester.pump();
-        expect(capturedFilters!.filtroEstado, 'Pendiente');
-
-        // Luego tocar "Todos"
-        await tester.tap(find.widgetWithText(ChoiceChip, 'Todos'));
-        await tester.pump();
-
-        // Verificar que el filtro se resetea a 'Todos'
-        expect(capturedFilters!.filtroEstado, 'Todos');
-      },
-    );
+      expect(find.text('Silla dañada'), findsOneWidget);
+      expect(find.text('Lámpara averiada'), findsOneWidget);
+      expect(find.text('Puerta dañada'), findsOneWidget);
+      expect(find.text('Banca dañada'), findsOneWidget);
+    });
 
     // Test: dropdown de edificio usa valores de CatalogoEdificios
     testWidgets('dropdown edificio muestra opciones de CatalogoEdificios', (
@@ -434,6 +314,7 @@ void main() {
 
     // Test: cada tarjeta tiene onTap con reportId
     testWidgets('cada tarjeta existe y es tappable', (tester) async {
+      usarPantallaAlta(tester);
       final reportes = crearReportes();
 
       await tester.pumpWidget(createTestWidget(reportes: reportes));
@@ -560,6 +441,45 @@ void main() {
 
       expect(find.text('Reporte ajeno'), findsOneWidget);
       expect(find.text('Toma un reporte para atenderlo'), findsNothing);
+    });
+
+    testWidgets('filtro de fechas: Hoy deja solo los reportes de hoy', (
+      tester,
+    ) async {
+      usarPantallaAlta(tester);
+      await tester.pumpWidget(createTestWidget(reportes: crearReportes()));
+      await tester.pump();
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Hoy'));
+      await tester.pump();
+
+      expect(find.text('Banca dañada'), findsOneWidget);
+      expect(find.text('Silla dañada'), findsNothing);
+      expect(find.text('Lámpara averiada'), findsNothing);
+      expect(find.text('Puerta dañada'), findsNothing);
+    });
+
+    testWidgets('superadministrador: pestaña Estadísticas muestra dashboard', (
+      tester,
+    ) async {
+      usarPantallaAlta(tester);
+      await tester.pumpWidget(
+        createTestWidget(
+          reportes: crearReportes(),
+          rol: RolEnum.superadministrador,
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Estadísticas'));
+      await tester.pump();
+
+      expect(find.text('General histórico'), findsOneWidget);
+      expect(find.text('Periodo seleccionado'), findsOneWidget);
+      expect(find.text('Distribución por estado'), findsOneWidget);
+      expect(find.text('Reportes por día'), findsOneWidget);
+      expect(find.text('Detalle por fecha'), findsOneWidget);
+      expect(find.byType(ReportCard), findsNothing);
     });
 
     testWidgets('estado loading: muestra CircularProgressIndicator', (

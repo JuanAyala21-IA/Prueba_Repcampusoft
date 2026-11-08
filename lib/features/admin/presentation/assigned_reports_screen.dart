@@ -7,7 +7,10 @@ import '../../../core/routes/session_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/estado_reporte_style.dart';
+import '../../../core/utils/rango_fechas.dart';
 import '../../../shared/widgets/curved_green_background.dart';
+import '../../../shared/widgets/date_range_filter.dart';
+import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/report_card.dart';
 import '../../../shared/widgets/uts_header.dart';
 import '../../reportes/data/providers/reporte_providers.dart';
@@ -16,11 +19,19 @@ import '../../reportes/domain/reporte.dart';
 /// Sección exclusiva del personal de mantenimiento: reportes que tomó y que
 /// todavía debe resolver. Evita que se pierdan entre todos los daños
 /// reportados.
-class AssignedReportsScreen extends ConsumerWidget {
+class AssignedReportsScreen extends ConsumerStatefulWidget {
   const AssignedReportsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AssignedReportsScreen> createState() =>
+      _AssignedReportsScreenState();
+}
+
+class _AssignedReportsScreenState extends ConsumerState<AssignedReportsScreen> {
+  RangoFechas _rango = const RangoFechas.todo();
+
+  @override
+  Widget build(BuildContext context) {
     final Sesion sesion = ref.watch(sesionProvider);
     final asyncReportes = ref.watch(
       todosLosReportesProvider((
@@ -39,6 +50,14 @@ class AssignedReportsScreen extends ConsumerWidget {
                 subtitulo: 'Daños que tomaste para resolver',
                 mostrarLogo: false,
               ),
+              const SizedBox(height: 4),
+              DateRangeFilter(
+                valor: _rango,
+                onChanged: (RangoFechas rango) {
+                  setState(() => _rango = rango);
+                },
+              ),
+              const SizedBox(height: 8),
               Expanded(
                 child: asyncReportes.when(
                   loading: () =>
@@ -51,6 +70,9 @@ class AssignedReportsScreen extends ConsumerWidget {
                           if (!reporte.asignadoAUsuario(sesion.uid)) {
                             return false;
                           }
+                          if (!_rango.contiene(reporte.creadoEn)) {
+                            return false;
+                          }
                           return reporte.estado != EstadoReporte.solucionado &&
                               reporte.estado != EstadoReporte.rechazado;
                         }).toList()..sort((a, b) {
@@ -60,7 +82,11 @@ class AssignedReportsScreen extends ConsumerWidget {
                         });
 
                     if (asignados.isEmpty) {
-                      return const _SinAsignados();
+                      return _SinAsignados(
+                        rango: _rango,
+                        onVerTodo: () =>
+                            setState(() => _rango = const RangoFechas.todo()),
+                      );
                     }
                     return _ListaAsignados(reportes: asignados);
                   },
@@ -154,7 +180,10 @@ class _ListaAsignados extends StatelessWidget {
 }
 
 class _SinAsignados extends StatelessWidget {
-  const _SinAsignados();
+  const _SinAsignados({required this.rango, required this.onVerTodo});
+
+  final RangoFechas rango;
+  final VoidCallback onVerTodo;
 
   @override
   Widget build(BuildContext context) {
@@ -171,23 +200,33 @@ class _SinAsignados extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No tienes reportes asignados',
+              rango.esTodo
+                  ? 'No tienes reportes asignados'
+                  : 'No hay reportes asignados en este rango',
               style: Theme.of(context).textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Toma un reporte en "Daños Reportados" y aparecerá aquí para que '
-              'no se pierda entre los demás.',
+              rango.esTodo
+                  ? 'Toma un reporte en "Daños Reportados" y aparecerá aquí para que no se pierda entre los demás.'
+                  : rango.descripcion,
               style: AppTypography.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () => context.push(AppRoutes.danosReportados),
-              icon: const Icon(Icons.campaign_outlined),
-              label: const Text('Ver daños reportados'),
-            ),
+            if (!rango.esTodo)
+              PrimaryButton(
+                texto: 'Ver todo el tiempo',
+                onPressed: onVerTodo,
+                variante: Variante.secundario,
+              )
+            else
+              FilledButton.icon(
+                onPressed: () => context.push(AppRoutes.danosReportados),
+                icon: const Icon(Icons.campaign_outlined),
+                label: const Text('Ver daños reportados'),
+              ),
           ],
         ),
       ),

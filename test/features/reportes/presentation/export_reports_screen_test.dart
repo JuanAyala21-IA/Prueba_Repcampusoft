@@ -72,6 +72,7 @@ List<Reporte> _crearReportes() {
 Widget _crearPantalla({
   required List<Reporte> reportes,
   required _FakeReporteCsvSaver saver,
+  String location = AppRoutes.exportarReportes,
 }) {
   return ProviderScope(
     overrides: [
@@ -82,7 +83,7 @@ Widget _crearPantalla({
     ],
     child: MaterialApp.router(
       routerConfig: GoRouter(
-        initialLocation: AppRoutes.exportarReportes,
+        initialLocation: location,
         routes: [
           GoRoute(
             path: AppRoutes.exportarReportes,
@@ -171,6 +172,45 @@ void main() {
       expect(find.text('No se guardó el archivo.'), findsOneWidget);
     });
 
+    testWidgets('respeta los filtros de fecha y estado recibidos por URL', (
+      tester,
+    ) async {
+      final saver = _FakeReporteCsvSaver();
+      final String location = Uri(
+        path: AppRoutes.exportarReportes,
+        queryParameters: const <String, String>{
+          'desde': '2026-11-01T00:00:00.000',
+          'hasta': '2026-11-06T00:00:00.000',
+          'estado': 'Solucionado',
+        },
+      ).toString();
+
+      await tester.pumpWidget(
+        _crearPantalla(
+          reportes: _crearReportes(),
+          saver: saver,
+          location: location,
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Total: 1'), findsOneWidget);
+      expect(find.text('Solucionado: 1'), findsOneWidget);
+      expect(find.textContaining('1 de 5 reportes'), findsOneWidget);
+
+      final boton = find.widgetWithText(PrimaryButton, 'Descargar CSV');
+      await tester.ensureVisible(boton);
+      await tester.pump();
+      await tester.tap(boton);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(saver.llamadas, 1);
+      final contenido = saver.contenidoRecibido!;
+      expect(contenido.contains('r-solucionado'), isTrue);
+      expect(contenido.contains('r-pendiente'), isFalse);
+    });
+
     testWidgets('deshabilita la descarga cuando no hay reportes', (
       tester,
     ) async {
@@ -181,7 +221,7 @@ void main() {
 
       expect(find.text('Total: 0'), findsOneWidget);
       expect(
-        find.text('Todavía no hay reportes para exportar.'),
+        find.text('No hay reportes con los filtros seleccionados.'),
         findsOneWidget,
       );
       final boton = tester.widget<PrimaryButton>(

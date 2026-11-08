@@ -17,6 +17,10 @@ estado: `Pendiente`, `En revision`, `En proceso`, `Solucionado` y `Rechazado`.
 La pantalla muestra un resumen con el total y la cantidad por estado antes de
 descargar.
 
+Si se abre desde **Daños Reportados**, el CSV respeta el filtro de fechas y el
+estado que estén activos en esa pantalla. Dentro de la pantalla de exportación
+también se pueden ajustar ambos filtros o limpiarlos para exportar todo.
+
 Columnas (en este orden):
 
 1. ID del reporte

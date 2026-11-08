@@ -125,6 +125,47 @@ void main() {
       expect(find.byType(ReportCard), findsNothing);
     });
 
+    testWidgets(
+      'filtro de fechas: Hoy oculta reportes antiguos y se puede limpiar',
+      (tester) async {
+        final reportes = [
+          Reporte(
+            reporteId: 'r1',
+            uid: 'user-1',
+            correoAutor: 'user1@example.com',
+            tipoDano: 'Silla dañada',
+            tipoUbicacion: TipoEspacio.aula,
+            edificio: 'Edificio A',
+            piso: 'Piso 1',
+            espacio: 'Salón 101',
+            descripcion: 'Grieta en la silla',
+            estado: EstadoReporte.pendiente,
+            tieneFoto: false,
+            creadoEn: DateTime.now().subtract(const Duration(days: 10)),
+          ),
+        ];
+
+        await tester.pumpWidget(createTestWidget(Stream.value(reportes)));
+        await tester.pumpAndSettle();
+        expect(find.byType(ReportCard), findsOneWidget);
+
+        await tester.tap(find.widgetWithText(ChoiceChip, 'Hoy'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('No hay reportes en este rango de fechas'),
+          findsOneWidget,
+        );
+        expect(find.byType(ReportCard), findsNothing);
+
+        await tester.tap(find.text('Ver todo el tiempo'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ReportCard), findsOneWidget);
+        expect(find.text('Silla dañada'), findsOneWidget);
+      },
+    );
+
     testWidgets('en estado loading: muestra CircularProgressIndicator', (
       tester,
     ) async {

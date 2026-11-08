@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/estado_reporte_style.dart';
+import '../../../core/utils/rango_fechas.dart';
 import '../../../shared/widgets/curved_green_background.dart';
+import '../../../shared/widgets/date_range_filter.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/uts_header.dart';
 import '../data/providers/reporte_providers.dart';
@@ -12,10 +15,10 @@ import '../data/reporte_csv_saver.dart';
 import '../domain/reporte.dart';
 import '../domain/reporte_csv.dart';
 
-/// Exportación de todos los reportes a CSV (solo superadministrador).
+/// Exportación de reportes a CSV (solo superadministrador).
 ///
-/// Muestra un resumen por estado y genera un archivo con la información
-/// completa de cada reporte usando el diálogo nativo de guardado.
+/// Puede recibir por URL `desde` y `hasta` (ISO 8601) y `estado` para exportar
+/// exactamente el filtro que estaba activo en "Daños Reportados".
 class ExportReportsScreen extends ConsumerStatefulWidget {
   const ExportReportsScreen({super.key});
 
@@ -26,6 +29,37 @@ class ExportReportsScreen extends ConsumerStatefulWidget {
 
 class _ExportReportsScreenState extends ConsumerState<ExportReportsScreen> {
   bool _guardando = false;
+  bool _filtrosInicializados = false;
+  RangoFechas _rango = const RangoFechas.todo();
+  String _estado = 'Todos';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_filtrosInicializados) return;
+    _filtrosInicializados = true;
+    final Map<String, String> parametros = GoRouterState.of(context)
+        .uri
+        .queryParameters;
+    _rango = RangoFechas.desdeParametros(parametros);
+    final String? estado = parametros['estado'];
+    if (estado != null &&
+        EstadoReporte.values.any(
+          (EstadoReporte valor) => valor.valorFirestore == estado,
+        )) {
+      _estado = estado;
+    }
+  }
+
+  List<Reporte> _filtrar(List<Reporte> reportes) {
+    return reportes.where((Reporte reporte) {
+      if (!_rango.contiene(reporte.creadoEn)) return false;
+      if (_estado != 'Todos' && reporte.estado.valorFirestore != _estado) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
 
   Future<void> _descargarCsv(List<Reporte> reportes) async {
     setState(() => _guardando = true);
@@ -85,11 +119,29 @@ class _ExportReportsScreenState extends ConsumerState<ExportReportsScreen> {
                       )),
                     ),
                   ),
-                  data: (reportes) => _ContenidoExportacion(
-                    reportes: reportes,
-                    guardando: _guardando,
-                    onDescargar: () => _descargarCsv(reportes),
-                  ),
+                  data: (reportes) {
+                    final List<Reporte> filtrados = _filtrar(reportes);
+                    return _ContenidoExportacion(
+                      reportes: filtrados,
+                      totalGeneral: reportes.length,
+                      rango: _rango,
+                      estado: _estado,
+                      guardando: _guardando,
+                      onRango: (RangoFechas rango) {
+                        setState(() => _rango = rango);
+                      },
+                      onEstado: (String estado) {
+                        setState(() => _estado = estado);
+                      },
+                      onLimpiar: () {
+                        setState(() {
+                          _rango = const RangoFechas.todo();
+                          _estado = 'Todos';
+                        });
+                      },
+                      onDescargar: () => _descargarCsv(filtrados),
+                    );
+                  },
                 ),
               ),
             ],
@@ -103,17 +155,30 @@ class _ExportReportsScreenState extends ConsumerState<ExportReportsScreen> {
 class _ContenidoExportacion extends StatelessWidget {
   const _ContenidoExportacion({
     required this.reportes,
+    required this.totalGeneral,
+    required this.rango,
+    required this.estado,
     required this.guardando,
+    required this.onRango,
+    required this.onEstado,
+    required this.onLimpiar,
     required this.onDescargar,
   });
 
   final List<Reporte> reportes;
+  final int totalGeneral;
+  final RangoFechas rango;
+  final String estado;
   final bool guardando;
+  final ValueChanged<RangoFechas> onRango;
+  final ValueChanged<String> onEstado;
+  final VoidCallback onLimpiar;
   final VoidCallback onDescargar;
 
   @override
   Widget build(BuildContext context) {
     final bool sinReportes = reportes.isEmpty;
+    final bool conFiltros = !rango.esTodo || estado != 'Todos';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -163,17 +228,56 @@ class _ContenidoExportacion extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'El archivo incluye todos los reportes registrados, sin '
-                  'importar su estado: pendientes, en revisión, en proceso, '
-                  'solucionados y rechazados.',
+                  conFiltros
+                      ? 'El archivo incluye solamente los reportes que cumplen '
+                            'el filtro seleccionado. Puedes ajustarlo aquí.'
+                      : 'El archivo incluye todos los reportes registrados, sin '
+                            'importar su estado: pendientes, en revisión, en '
+                            'proceso, solucionados y rechazados.',
                   style: AppTypography.textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
+                const Divider(color: AppColors.divider),
+                const SizedBox(height: 10),
+                Text(
+                  'Filtro de fechas',
+                  style: AppTypography.textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                DateRangeFilter(
+                  valor: rango,
+                  onChanged: onRango,
+                  padding: EdgeInsets.zero,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Text('Estado:', style: AppTypography.textTheme.titleSmall),
+                    const SizedBox(width: 10),
+                    Expanded(child: _selectorEstado()),
+                    if (conFiltros)
+                      TextButton(
+                        onPressed: onLimpiar,
+                        child: const Text('Limpiar'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 const Divider(color: AppColors.divider),
                 const SizedBox(height: 12),
                 Text(
-                  'Resumen actual',
+                  'Resumen del filtro',
                   style: AppTypography.textTheme.titleSmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  conFiltros
+                      ? '${reportes.length} de $totalGeneral reportes · '
+                            '${rango.descripcion}'
+                      : '${reportes.length} reportes · todo el tiempo',
+                  style: AppTypography.textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 _ResumenEstados(reportes: reportes),
@@ -214,7 +318,7 @@ class _ContenidoExportacion extends StatelessWidget {
                 if (sinReportes) ...[
                   const SizedBox(height: 10),
                   Text(
-                    'Todavía no hay reportes para exportar.',
+                    'No hay reportes con los filtros seleccionados.',
                     textAlign: TextAlign.center,
                     style: AppTypography.textTheme.bodySmall,
                   ),
@@ -232,6 +336,40 @@ class _ContenidoExportacion extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _selectorEstado() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: estado,
+          isDense: true,
+          isExpanded: true,
+          icon: const Icon(
+            Icons.arrow_drop_down,
+            color: AppColors.textSecondary,
+          ),
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+          dropdownColor: AppColors.background,
+          items: [
+            const DropdownMenuItem(value: 'Todos', child: Text('Todos')),
+            for (final EstadoReporte valor in EstadoReporte.values)
+              DropdownMenuItem(
+                value: valor.valorFirestore,
+                child: Text(valor.nombre),
+              ),
+          ],
+          onChanged: (String? valor) {
+            if (valor != null) onEstado(valor);
+          },
+        ),
       ),
     );
   }
