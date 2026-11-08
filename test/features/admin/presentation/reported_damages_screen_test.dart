@@ -105,6 +105,11 @@ void main() {
                 path: AppRoutes.gestionReporte,
                 builder: (_, _) => const SizedBox.shrink(),
               ),
+              GoRoute(
+                path: AppRoutes.exportarReportes,
+                builder: (_, _) =>
+                    const Scaffold(body: Text('EXPORTAR_REPORTES')),
+              ),
             ],
           ),
         ),
@@ -112,6 +117,42 @@ void main() {
     }
 
     // Test simple sin filtros - verifica que se renderiza correctamente
+    testWidgets('superadministrador ve el botón para descargar el CSV', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          reportes: crearReportes(),
+          rol: RolEnum.superadministrador,
+        ),
+      );
+      await tester.pump();
+
+      final boton = find.byTooltip('Descargar reportes (CSV)');
+      expect(boton, findsOneWidget);
+      await tester.tap(boton);
+      await tester.pump();
+
+      expect(find.text('EXPORTAR_REPORTES'), findsOneWidget);
+    });
+
+    testWidgets('administrativo y mantenimiento no ven el botón de CSV', (
+      tester,
+    ) async {
+      for (final rol in [RolEnum.administrativo, RolEnum.mantenimiento]) {
+        await tester.pumpWidget(
+          createTestWidget(reportes: crearReportes(), rol: rol),
+        );
+        await tester.pump();
+
+        expect(
+          find.byTooltip('Descargar reportes (CSV)'),
+          findsNothing,
+          reason: rol.nombreFirestore,
+        );
+      }
+    });
+
     testWidgets('sin filtros: muestra reportes con StatusBadge correcto', (
       tester,
     ) async {

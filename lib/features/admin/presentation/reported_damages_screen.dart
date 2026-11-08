@@ -62,6 +62,7 @@ class _ReportedDamagesScreenState extends ConsumerState<ReportedDamagesScreen> {
     );
     final Sesion sesion = ref.watch(sesionProvider);
     final bool esMantenimiento = sesion.rol == RolEnum.mantenimiento;
+    final bool esSuperadministrador = sesion.esSuperadministrador;
 
     return Scaffold(
       body: CurvedGreenBackground(
@@ -73,6 +74,14 @@ class _ReportedDamagesScreenState extends ConsumerState<ReportedDamagesScreen> {
                 mostrarLogo: false,
                 subtitulo: esMantenimiento
                     ? 'Toma un reporte para atenderlo'
+                    : null,
+                accion: esSuperadministrador
+                    ? IconButton(
+                        tooltip: 'Descargar reportes (CSV)',
+                        onPressed: () =>
+                            context.push(AppRoutes.exportarReportes),
+                        icon: const Icon(Icons.file_download_outlined),
+                      )
                     : null,
               ),
               const SizedBox(height: 8),
