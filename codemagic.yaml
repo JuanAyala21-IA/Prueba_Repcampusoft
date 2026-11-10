@@ -1,0 +1,32 @@
+workflows:
+  ios-unsigned:
+    name: iOS unsigned IPA
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Preparar Flutter
+        script: |
+          flutter config --no-enable-swift-package-manager
+          flutter --version
+          flutter pub get
+
+      - name: Compilar iOS sin firma
+        script: |
+          flutter build ios --release --no-codesign
+
+      - name: Empaquetar IPA sin firma
+        script: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          mv Runner.app Payload/
+          zip -r -q REPCAMPUSOFT-unsigned.ipa Payload
+          ls -lh REPCAMPUSOFT-unsigned.ipa
+
+    artifacts:
+      - build/ios/iphoneos/REPCAMPUSOFT-unsigned.ipa
