@@ -17,6 +17,14 @@ Functions). Resumen de lo implementado.
   `storagePath`, `downloadUrl`, `tamanoBytes`, `mimeType`, `creadoEn`.
 - **Compatibilidad**: las imágenes antiguas en Base64 siguen funcionando; la UI
   intenta `base64` y, si no existe, descarga desde Storage.
+- **Lectura en la app** (`lib/features/reportes/data/media_reporte_loader.dart`):
+  1. `base64` si existe (documentos antiguos).
+  2. `downloadUrl` con token, descargada por HTTP (`descargarDesdeUrl`). Es la
+     vía principal porque no depende de que el SDK de Storage adjunte el token
+     de Firebase Auth; en web `getData` fallaba y la foto se veía vacía.
+  3. `storagePath` con el SDK de Storage como respaldo.
+  Si hay imagen registrada pero ninguna vía funciona, la pantalla muestra
+  «No se pudo cargar la imagen» con un botón **Reintentar**.
 - **Reglas**: `storage.rules` limita a imágenes < 2 MB y a las rutas
   `foto.jpg` / `solucion.jpg`, y exige que `request.auth.uid` coincida con el
   uid de la ruta. `firestore.rules` valida quién puede registrar cada media

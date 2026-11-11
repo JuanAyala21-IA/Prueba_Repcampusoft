@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:http/http.dart' as http;
 
 import '../domain/servicio_almacenamiento_imagen.dart';
 
@@ -65,6 +66,26 @@ class FirebaseAlmacenamientoImagen implements ServicioAlmacenamientoImagen {
       throw StateError('La imagen no existe en Storage: $storagePath');
     }
     return data;
+  }
+
+  @override
+  Future<Uint8List> descargarDesdeUrl(String downloadUrl) async {
+    final Uri uri = Uri.parse(downloadUrl);
+    final http.Response respuesta = await http
+        .get(uri)
+        .timeout(const Duration(seconds: 30));
+    if (respuesta.statusCode != 200) {
+      throw StateError(
+        'No se pudo descargar la imagen (HTTP ${respuesta.statusCode}).',
+      );
+    }
+    if (respuesta.bodyBytes.isEmpty) {
+      throw StateError('La imagen descargada está vacía.');
+    }
+    if (respuesta.bodyBytes.lengthInBytes > _maxBytesDescarga) {
+      throw StateError('La imagen supera el tamaño máximo permitido.');
+    }
+    return respuesta.bodyBytes;
   }
 
   @override

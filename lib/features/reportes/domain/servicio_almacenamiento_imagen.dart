@@ -42,6 +42,12 @@ abstract interface class ServicioAlmacenamientoImagen {
   /// Descarga una imagen por su ruta de Storage.
   Future<Uint8List> descargar(String storagePath);
 
+  /// Descarga una imagen a partir de su URL de descarga con token.
+  ///
+  /// Es el método preferido para mostrar evidencias: la URL ya autoriza la
+  /// lectura y no depende de que el SDK adjunte el token de Firebase Auth.
+  Future<Uint8List> descargarDesdeUrl(String downloadUrl);
+
   /// Elimina una imagen (limpieza best-effort si falla la escritura).
   Future<void> eliminar(String storagePath);
 }

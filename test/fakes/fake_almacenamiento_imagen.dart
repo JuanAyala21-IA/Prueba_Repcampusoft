@@ -5,7 +5,9 @@ import 'package:repcampusoft/features/reportes/domain/servicio_almacenamiento_im
 /// Fake en memoria de Firebase Storage para las pruebas del repositorio.
 class FakeAlmacenamientoImagen implements ServicioAlmacenamientoImagen {
   final Map<String, Uint8List> objetos = <String, Uint8List>{};
+  final Map<String, Uint8List> urls = <String, Uint8List>{};
   final List<String> subidas = <String>[];
+  bool fallarDescarga = false;
 
   @override
   Future<ImagenAlmacenada> subirFotoReporte({
@@ -32,9 +34,19 @@ class FakeAlmacenamientoImagen implements ServicioAlmacenamientoImagen {
 
   @override
   Future<Uint8List> descargar(String storagePath) async {
+    if (fallarDescarga) throw StateError('Descarga simulada fallida');
     final Uint8List? data = objetos[storagePath];
     if (data == null) {
       throw StateError('No existe la imagen $storagePath');
+    }
+    return data;
+  }
+
+  @override
+  Future<Uint8List> descargarDesdeUrl(String downloadUrl) async {
+    final Uint8List? data = urls[downloadUrl];
+    if (data == null) {
+      throw StateError('No existe la URL $downloadUrl');
     }
     return data;
   }

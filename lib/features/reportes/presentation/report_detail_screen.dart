@@ -1,8 +1,5 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +9,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../shared/widgets/image_preview.dart';
 import '../../../shared/widgets/uts_header.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../data/media_reporte_loader.dart';
 import '../domain/historial_entry.dart';
 import '../domain/reporte.dart';
 import '../domain/servicio_almacenamiento_imagen.dart';
@@ -331,6 +329,7 @@ class _FotoEvidencia extends ConsumerStatefulWidget {
 
 class _FotoEvidenciaState extends ConsumerState<_FotoEvidencia> {
   late Future<Uint8List?> _foto;
+  bool _errorCarga = false;
 
   @override
   void initState() {
@@ -343,43 +342,34 @@ class _FotoEvidenciaState extends ConsumerState<_FotoEvidencia> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.reporteId != widget.reporteId ||
         oldWidget.mediaId != widget.mediaId) {
+      _errorCarga = false;
       _foto = _cargarFoto();
     }
+  }
+
+  void _reintentar() {
+    setState(() {
+      _errorCarga = false;
+      _foto = _cargarFoto();
+    });
   }
 
   /// Se guarda el Future para no volver a leer Firestore/Storage en cada
   /// rebuild (eso hacía que la imagen parpadeara). Soporta las imágenes nuevas
   /// en Storage y las antiguas guardadas como Base64.
   Future<Uint8List?> _cargarFoto() async {
-    final DocumentSnapshot<Map<String, dynamic>> doc = await FirebaseFirestore
-        .instance
-        .collection('reports')
-        .doc(widget.reporteId)
-        .collection('media')
-        .doc(widget.mediaId)
-        .get();
-    if (!doc.exists || doc.data() == null) return null;
-    final Map<String, dynamic> data = doc.data()!;
-
-    final String? base64 = data['base64'] as String?;
-    if (base64 != null && base64.isNotEmpty) {
-      return base64Decode(base64);
+    try {
+      final Uint8List? bytes = await cargarMediaReporte(
+        reporteId: widget.reporteId,
+        mediaId: widget.mediaId,
+        almacenamiento: ref.read(servicioAlmacenamientoImagenProvider),
+      );
+      _errorCarga = false;
+      return bytes;
+    } catch (_) {
+      _errorCarga = true;
+      return null;
     }
-
-    final String? storagePath = data['storagePath'] as String?;
-    if (storagePath != null && storagePath.isNotEmpty) {
-      return ref
-          .read(servicioAlmacenamientoImagenProvider)
-          .descargar(storagePath);
-    }
-
-    final String? downloadUrl = data['downloadUrl'] as String?;
-    if (downloadUrl != null && downloadUrl.isNotEmpty) {
-      return FirebaseStorage.instance
-          .refFromURL(downloadUrl)
-          .getData(5 * 1024 * 1024);
-    }
-    return null;
   }
 
   @override
@@ -410,12 +400,34 @@ class _FotoEvidenciaState extends ConsumerState<_FotoEvidencia> {
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: AppColors.divider),
             ),
-            child: const Center(
-              child: Icon(
-                Icons.image_outlined,
-                size: 48,
-                color: AppColors.textSecondary,
-              ),
+            child: Center(
+              child: _errorCarga
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.broken_image_outlined,
+                          size: 40,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'No se pudo cargar la imagen',
+                          style: AppTypography.textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _reintentar,
+                          child: const Text('Reintentar'),
+                        ),
+                      ],
+                    )
+                  : const Icon(
+                      Icons.image_outlined,
+                      size: 48,
+                      color: AppColors.textSecondary,
+                    ),
             ),
           );
         }
