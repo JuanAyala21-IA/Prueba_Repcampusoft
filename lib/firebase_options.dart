@@ -9,10 +9,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -33,13 +30,23 @@ class DefaultFirebaseOptions {
     projectId: 'repcampusoft',
     storageBucket: 'repcampusoft.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDvGKNrCkUz4e6wJkU9iZyRcF9aWGz-_9s',
     appId: '1:895201556108:ios:df51473b18a0b84da4eda9',
     messagingSenderId: '895201556108',
     projectId: 'repcampusoft',
     storageBucket: 'repcampusoft.firebasestorage.app',
+    androidClientId: '895201556108-b1hoa75brnp72a17nuc8qblsscgko2ps.apps.googleusercontent.com',
+    iosClientId: '895201556108-io1s78v7a4vilr9478kp3advms7g588c.apps.googleusercontent.com',
     iosBundleId: 'co.edu.uts.repcampusoft',
+  );
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyBjArb83NKkD1QTtdRk3ssppr9l5UmKtrM',
+    appId: '1:895201556108:web:a7ba6f856daae202a4eda9',
+    messagingSenderId: '895201556108',
+    projectId: 'repcampusoft',
+    authDomain: 'repcampusoft.firebaseapp.com',
+    storageBucket: 'repcampusoft.firebasestorage.app',
+    measurementId: 'G-ZC57WDCGZG',
   );
 }

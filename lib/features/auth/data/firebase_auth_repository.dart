@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../core/utils/results.dart';
@@ -72,6 +73,16 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> iniciarSesionConGoogle() async {
+    // En web `google_sign_in` no implementa `authenticate()`: la integración
+    // oficial usa el botón de Google Identity Services. Firebase Auth sí
+    // resuelve el flujo completo con una ventana emergente y la misma
+    // configuración de `firebase_options.dart`, así que en el navegador se usa
+    // `signInWithPopup` y en Android/iOS se conserva el selector nativo.
+    if (kIsWeb) {
+      await _iniciarSesionConGoogleWeb();
+      return;
+    }
+
     final GoogleSignInAccount cuenta;
     try {
       await _inicializarGoogle();
@@ -100,6 +111,28 @@ class FirebaseAuthRepository implements AuthRepository {
       idToken: idToken,
     );
     await _auth.signInWithCredential(credencial);
+  }
+
+  /// Flujo de Google para navegador.
+  ///
+  /// Firebase abre el selector de cuentas en una ventana emergente y deja la
+  /// sesión en `authStateChanges`; no requiere client ID en Dart porque usa el
+  /// cliente web configurado en Firebase Authentication.
+  Future<void> _iniciarSesionConGoogleWeb() async {
+    final GoogleAuthProvider proveedor = GoogleAuthProvider();
+    // Permite elegir la cuenta aunque el navegador ya tenga una sesión activa.
+    proveedor.setCustomParameters(<String, String>{
+      'prompt': 'select_account',
+    });
+    try {
+      await _auth.signInWithPopup(proveedor);
+    } on FirebaseAuthException catch (error) {
+      if (error.code == 'popup-closed-by-user' ||
+          error.code == 'cancelled-popup-request') {
+        throw FirebaseAuthException(code: 'web-context-canceled');
+      }
+      rethrow;
+    }
   }
 
   @override
