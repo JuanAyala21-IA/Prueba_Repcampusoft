@@ -5,6 +5,7 @@ import '../../../core/routes/session_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/results.dart';
+import '../../../shared/widgets/curved_green_background.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/uts_header.dart';
 import '../domain/rol_enum.dart';
@@ -69,55 +70,83 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   Widget build(BuildContext context) {
     final Sesion sesion = ref.watch(sesionProvider);
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              const UtsHeader(
-                titulo: 'Verifica tu correo',
-                mostrarRetroceso: false,
-              ),
-              const SizedBox(height: 30),
-              const Icon(
-                Icons.mark_email_read_outlined,
-                size: 72,
-                color: AppColors.utsGreen,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Tu cuenta aún no verifica el correo institucional.\n'
-                'Revisa tu bandeja de entrada y confirma el enlace para continuar.',
-                textAlign: TextAlign.center,
-                style: AppTypography.textTheme.bodyMedium,
-              ),
-              if (sesion.correo != null && sesion.correo!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Cuenta: ${sesion.correo}',
-                  textAlign: TextAlign.center,
-                  style: AppTypography.textTheme.bodySmall,
+      body: CurvedGreenBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Column(
+              children: [
+                const UtsHeader(
+                  titulo: 'Verifica tu correo',
+                  mostrarRetroceso: false,
+                  mostrarLogo: false,
                 ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x14000000),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.mark_email_read_outlined,
+                        size: 72,
+                        color: AppColors.utsGreen,
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Tu cuenta aún no verifica el correo institucional.\n'
+                        'Revisa tu bandeja de entrada y confirma el enlace para '
+                        'continuar.',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.textTheme.bodyMedium,
+                      ),
+                      if (sesion.correo != null &&
+                          sesion.correo!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Cuenta: ${sesion.correo}',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.textTheme.bodySmall,
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      PrimaryButton(
+                        texto: _verificando
+                            ? 'Verificando…'
+                            : 'Ya verifiqué mi correo',
+                        onPressed: _verificando ? null : _yaVerifique,
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: _enviando ? null : _reenviar,
+                        child: Text(
+                          _enviando
+                              ? 'Reenviando…'
+                              : 'Reenviar correo de verificación',
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      TextButton(
+                        onPressed: () =>
+                            ref.read(sesionProvider.notifier).cerrarSesion(),
+                        child: const Text('Cerrar sesión'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
               ],
-              const SizedBox(height: 30),
-              PrimaryButton(
-                texto: _verificando ? 'Verificando…' : 'Ya verifiqué mi correo',
-                onPressed: _verificando ? null : _yaVerifique,
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: _enviando ? null : _reenviar,
-                child: Text(
-                  _enviando ? 'Reenviando…' : 'Reenviar correo de verificación',
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () =>
-                    ref.read(sesionProvider.notifier).cerrarSesion(),
-                child: const Text('Cerrar sesión'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
