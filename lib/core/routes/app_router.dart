@@ -230,8 +230,10 @@ String? redireccionPorSesion(Sesion sesion, String ruta) {
 
     case SesionEstado.rolAplicado:
       final RolEnum? rol = sesion.rol;
+      // El rol administrativo comparte la experiencia del estudiante: puede
+      // reportar daños, ver sus reportes y sus notificaciones. Solo el
+      // mantenimiento y el superadministrador entran al panel de gestión.
       final Set<String> permitidas = switch (rol) {
-        RolEnum.administrativo => rutasGestion,
         RolEnum.mantenimiento => rutasMantenimiento,
         RolEnum.superadministrador => rutasSuperadministrador,
         _ => rutasPersona,
@@ -242,7 +244,6 @@ String? redireccionPorSesion(Sesion sesion, String ruta) {
       );
       if (permitida) return null;
       return switch (rol) {
-        RolEnum.administrativo ||
         RolEnum.mantenimiento ||
         RolEnum.superadministrador => AppRoutes.inicioAdmin,
         _ => AppRoutes.inicioEstudiante,

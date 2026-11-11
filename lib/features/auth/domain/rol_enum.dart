@@ -28,6 +28,9 @@ enum RolEnum {
 
   bool get esPersonal => this != RolEnum.persona;
 
-  bool get puedeGestionarReportes =>
-      this == RolEnum.administrativo || this == RolEnum.mantenimiento;
+  /// Roles que entran al panel de gestión de reportes.
+  ///
+  /// El rol administrativo comparte las funcionalidades del estudiante, así
+  /// que solo mantenimiento gestiona (y el superadministrador consulta).
+  bool get puedeGestionarReportes => this == RolEnum.mantenimiento;
 }

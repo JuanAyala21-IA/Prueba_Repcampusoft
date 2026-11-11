@@ -63,6 +63,12 @@ service cloud.firestore {
     function isMantenimiento()    { return isRol('mantenimiento'); }
     function isSuperadministrador() { return isRol('superadministrador'); }
 
+    // Roles que pueden crear reportes y administrar los suyos. El rol
+    // administrativo comparte las funcionalidades del estudiante.
+    function isReportante() {
+      return isPersona() || isAdministrativo();
+    }
+
     // Administrativos y encargados de mantenimiento gestionan los reportes.
     function canManageReports() {
       return isAdministrativo() || isMantenimiento();
@@ -198,11 +204,11 @@ service cloud.firestore {
 
     // ============ REPORTES ============
     match /reports/{reportId} {
-      allow read: if (isPersona() && resource.data.uid == request.auth.uid)
+      allow read: if (isReportante() && resource.data.uid == request.auth.uid)
                  || canManageReports()
                  || isSuperadministrador();
 
-      allow create: if isPersona()
+      allow create: if isReportante()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.correoAutor == request.auth.token.email
         && request.resource.data.estado == 'Pendiente'
@@ -300,7 +306,7 @@ service cloud.firestore {
       match /historial/{historialId} {
         allow read: if canManageReports()
                    || isSuperadministrador()
-                   || (isPersona()
+                   || (isReportante()
                        && get(reportDoc(reportId)).data.uid == request.auth.uid);
 
         allow create: if (canManageReports()
@@ -311,7 +317,7 @@ service cloud.firestore {
                           && request.resource.data.adminUid == request.auth.uid
                           && request.resource.data.adminNombre is string
                           && request.resource.data.adminNombre.size() > 0)
-                     || (isPersona()
+                     || (isReportante()
                           && request.resource.data.estadoAnterior == 'Pendiente'
                           && request.resource.data.estadoNuevo == 'Pendiente'
                           && historialId == reportId + '_inicial'
@@ -322,12 +328,12 @@ service cloud.firestore {
       }
 
       match /media/{mediaId} {
-        allow read: if (isPersona()
+        allow read: if (isReportante()
                         && get(reportDoc(reportId)).data.uid == request.auth.uid)
                       || canManageReports()
                       || isSuperadministrador();
 
-        allow create: if isPersona()
+        allow create: if isReportante()
           && mediaId == 'foto'
           && getAfter(reportDoc(reportId)).data.uid == request.auth.uid
           && getAfter(reportDoc(reportId)).data.tieneFoto == true // T2/6.2 getAfter x2 sobre el MISMO reportDoc (uid + tieneFoto) = 2 accesos.
@@ -389,9 +395,9 @@ service cloud.firestore {
               'uidDestino', 'destinoRol', 'autorUid', 'fallaId', 'creadoEn'])
         && request.resource.data.tipo in ['reporte', 'administrativo', 'sistema']
         && (
-             // Reporte creado por el estudiante: va al buzón compartido de
-             // administrativos y mantenimiento.
-             (isPersona()
+             // Reporte creado por el estudiante o por un administrativo: va al
+             // buzón compartido de administrativos y mantenimiento.
+             (isReportante()
                && request.resource.data.destinoRol == 'administrativo'
                && request.resource.data.evento == 'creado'
                && notifId == request.resource.data.reportId + '_' + request.resource.data.evento
@@ -417,7 +423,7 @@ service cloud.firestore {
                && request.resource.data.destinoRol == 'administrativo'
                && request.resource.data.reportId == null
                && request.resource.data.evento == null)
-          || (isPersona()
+          || (isReportante()
                && request.resource.data.destinoRol == 'superadministrador'
                && request.resource.data.tipo == 'sistema'
                && request.resource.data.fallaId != null

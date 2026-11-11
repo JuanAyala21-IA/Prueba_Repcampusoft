@@ -5,6 +5,8 @@ import 'package:repcampusoft/core/routes/session_provider.dart';
 import 'package:repcampusoft/core/utils/results.dart';
 import 'package:repcampusoft/features/auth/data/providers/auth_providers.dart';
 import 'package:repcampusoft/features/auth/domain/rol_enum.dart';
+import 'package:repcampusoft/features/auth/domain/tipo_acceso.dart';
+import 'package:repcampusoft/features/auth/domain/usuario.dart';
 import 'package:repcampusoft/features/notificaciones/data/local_notificaciones_service.dart';
 
 import 'fakes/fake_auth_repository.dart';
@@ -294,5 +296,149 @@ void main() {
     await pump();
 
     expect(container.read(sesionProvider).estado, SesionEstado.sinSesion);
+  });
+
+  group('Tipo de acceso en el inicio de sesión', () {
+    void sembrarPerfil(
+      FakeAuthRepository fake,
+      String correo,
+      RolEnum rol,
+    ) {
+      fake.verificadoPorCorreo[correo] = true;
+      fake.perfiles['uid-$correo'] = Usuario(
+        uid: 'uid-$correo',
+        nombre: 'Usuario de prueba',
+        correo: correo,
+        rol: rol,
+      );
+    }
+
+    test('una cuenta administrativa entra con acceso administrativo', () async {
+      final FakeAuthRepository fake = FakeAuthRepository();
+      sembrarPerfil(fake, 'admin@uts.edu.co', RolEnum.administrativo);
+      final ProviderContainer container = crearContainer(fake);
+      addTearDown(container.dispose);
+
+      final String? error = await container
+          .read(sesionProvider.notifier)
+          .iniciarSesion(
+            correo: 'admin@uts.edu.co',
+            contrasena: 'secreta1',
+            acceso: TipoAcceso.administrativo,
+          );
+
+      expect(error, isNull);
+      await pump();
+      final Sesion sesion = container.read(sesionProvider);
+      expect(sesion.estado, SesionEstado.rolAplicado);
+      expect(sesion.rol, RolEnum.administrativo);
+    });
+
+    test('una cuenta persona no entra con acceso administrativo', () async {
+      final FakeAuthRepository fake = FakeAuthRepository();
+      sembrarPerfil(fake, 'ana@ejemplo.com', RolEnum.persona);
+      final ProviderContainer container = crearContainer(fake);
+      addTearDown(container.dispose);
+
+      final String? error = await container
+          .read(sesionProvider.notifier)
+          .iniciarSesion(
+            correo: 'ana@ejemplo.com',
+            contrasena: 'secreta1',
+            acceso: TipoAcceso.administrativo,
+          );
+
+      expect(error, contains('Estudiante'));
+      await pump();
+      expect(container.read(sesionProvider).estado, SesionEstado.sinSesion);
+      expect(fake.usuarioActual(), isNull);
+    });
+
+    test('una cuenta administrativa no entra con acceso estudiante', () async {
+      final FakeAuthRepository fake = FakeAuthRepository();
+      sembrarPerfil(fake, 'admin@uts.edu.co', RolEnum.administrativo);
+      final ProviderContainer container = crearContainer(fake);
+      addTearDown(container.dispose);
+
+      final String? error = await container
+          .read(sesionProvider.notifier)
+          .iniciarSesion(
+            correo: 'admin@uts.edu.co',
+            contrasena: 'secreta1',
+            acceso: TipoAcceso.estudiante,
+          );
+
+      expect(error, contains('Administrativo'));
+      await pump();
+      expect(container.read(sesionProvider).estado, SesionEstado.sinSesion);
+      expect(fake.usuarioActual(), isNull);
+    });
+
+    test('mantenimiento y superadministrador entran como administrativo', () async {
+      for (final RolEnum rol in [
+        RolEnum.mantenimiento,
+        RolEnum.superadministrador,
+      ]) {
+        final FakeAuthRepository fake = FakeAuthRepository();
+        sembrarPerfil(fake, '${rol.nombreFirestore}@uts.edu.co', rol);
+        final ProviderContainer container = crearContainer(fake);
+        addTearDown(container.dispose);
+
+        final String? error = await container
+            .read(sesionProvider.notifier)
+            .iniciarSesion(
+              correo: '${rol.nombreFirestore}@uts.edu.co',
+              contrasena: 'secreta1',
+              acceso: TipoAcceso.administrativo,
+            );
+
+        expect(error, isNull, reason: rol.nombreFirestore);
+        await pump();
+        expect(container.read(sesionProvider).rol, rol);
+      }
+    });
+
+    test(
+      'acceso administrativo sin perfil no permite continuar',
+      () async {
+        final FakeAuthRepository fake = FakeAuthRepository();
+        fake.verificadoPorCorreo['nuevo@uts.edu.co'] = true;
+        final ProviderContainer container = crearContainer(fake);
+        addTearDown(container.dispose);
+
+        final String? error = await container
+            .read(sesionProvider.notifier)
+            .iniciarSesion(
+              correo: 'nuevo@uts.edu.co',
+              contrasena: 'secreta1',
+              acceso: TipoAcceso.administrativo,
+            );
+
+        expect(error, contains('cuenta administrativa'));
+        await pump();
+        expect(container.read(sesionProvider).estado, SesionEstado.sinSesion);
+        expect(fake.usuarioActual(), isNull);
+      },
+    );
+
+    test('Google respeta el tipo de acceso elegido', () async {
+      final FakeAuthRepository fake = FakeAuthRepository();
+      fake.correoGoogle = 'admin@uts.edu.co';
+      sembrarPerfil(fake, 'admin@uts.edu.co', RolEnum.administrativo);
+      // La cuenta de Google usa un uid propio: se replica el perfil con ese id.
+      fake.perfiles['uid-google-admin@uts.edu.co'] =
+          fake.perfiles['uid-admin@uts.edu.co']!;
+      final ProviderContainer container = crearContainer(fake);
+      addTearDown(container.dispose);
+
+      final String? error = await container
+          .read(sesionProvider.notifier)
+          .iniciarSesionConGoogle(acceso: TipoAcceso.estudiante);
+
+      expect(error, contains('Administrativo'));
+      await pump();
+      expect(container.read(sesionProvider).estado, SesionEstado.sinSesion);
+      expect(fake.usuarioActual(), isNull);
+    });
   });
 }

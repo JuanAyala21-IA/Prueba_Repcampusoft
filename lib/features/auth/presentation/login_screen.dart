@@ -10,6 +10,7 @@ import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/circular_button_uts.dart';
 import '../../../shared/widgets/fields.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../domain/tipo_acceso.dart';
 import 'auth_widgets.dart';
 
 /// Pantalla 1: Iniciar Sesión (RF-01, HU-01). El rol se resuelve desde
@@ -27,6 +28,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _clave = TextEditingController();
   bool _enviando = false;
   bool _enviandoGoogle = false;
+  TipoAcceso _acceso = TipoAcceso.estudiante;
 
   Future<void> _iniciarSesion() async {
     FocusScope.of(context).unfocus();
@@ -34,7 +36,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _enviando = true);
     final String? error = await ref
         .read(sesionProvider.notifier)
-        .iniciarSesion(correo: _correo.text, contrasena: _clave.text);
+        .iniciarSesion(
+          correo: _correo.text,
+          contrasena: _clave.text,
+          acceso: _acceso,
+        );
     if (!mounted) return;
     setState(() => _enviando = false);
     if (error != null) {
@@ -48,7 +54,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _enviandoGoogle = true);
     final String? error = await ref
         .read(sesionProvider.notifier)
-        .iniciarSesionConGoogle();
+        .iniciarSesionConGoogle(acceso: _acceso);
     if (!mounted) return;
     setState(() => _enviandoGoogle = false);
     if (error != null) {
@@ -101,7 +107,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     'INICIAR SESIÓN',
                     style: AppTypography.textTheme.titleMedium,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Ingresa como',
+                      style: AppTypography.textTheme.titleSmall,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TipoAccesoSelector(
+                    seleccionado: _acceso,
+                    habilitado: !(_enviando || _enviandoGoogle),
+                    onChanged: (acceso) => setState(() => _acceso = acceso),
+                  ),
+                  const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../domain/tipo_acceso.dart';
 
 /// Avatar circular negro con silueta de usuario (pantallas 1, 3, 4, 5, 6, 7.png).
 class UserAvatar extends StatelessWidget {
@@ -19,6 +20,109 @@ class UserAvatar extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: Icon(Icons.person, color: Colors.white, size: tamano * 0.55),
+    );
+  }
+}
+
+/// Selector "Estudiante / Administrativo" exclusivo del inicio de sesión.
+///
+/// No cambia el rol del usuario: solo indica con qué tipo de cuenta se está
+/// intentando entrar. La validación real se hace contra `users/{uid}` al
+/// autenticarse.
+class TipoAccesoSelector extends StatelessWidget {
+  const TipoAccesoSelector({
+    super.key,
+    required this.seleccionado,
+    required this.onChanged,
+    this.habilitado = true,
+  });
+
+  final TipoAcceso seleccionado;
+  final ValueChanged<TipoAcceso>? onChanged;
+  final bool habilitado;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        children: [
+          for (final TipoAcceso acceso in TipoAcceso.values)
+            Expanded(
+              child: _OpcionAcceso(
+                acceso: acceso,
+                activa: acceso == seleccionado,
+                onTap: habilitado ? () => onChanged?.call(acceso) : null,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OpcionAcceso extends StatelessWidget {
+  const _OpcionAcceso({
+    required this.acceso,
+    required this.activa,
+    required this.onTap,
+  });
+
+  final TipoAcceso acceso;
+  final bool activa;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final IconData icono = acceso == TipoAcceso.estudiante
+        ? Icons.school_outlined
+        : Icons.badge_outlined;
+    final Color colorTexto = activa
+        ? AppColors.textPrimary
+        : AppColors.textSecondary;
+
+    return Semantics(
+      button: true,
+      selected: activa,
+      label: 'Ingresar como ${acceso.etiqueta}',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(30),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
+            decoration: BoxDecoration(
+              color: activa ? AppColors.utsGreen : Colors.transparent,
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icono, size: 18, color: colorTexto),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    acceso.etiqueta,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.textTheme.labelLarge?.copyWith(
+                      fontSize: 13,
+                      color: colorTexto,
+                      fontWeight: activa ? FontWeight.w700 : FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

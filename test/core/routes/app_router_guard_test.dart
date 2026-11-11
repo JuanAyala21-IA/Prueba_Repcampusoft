@@ -132,45 +132,81 @@ void main() {
     });
   });
 
-  group('Gate de administrativo y mantenimiento', () {
-    for (final rol in [RolEnum.administrativo, RolEnum.mantenimiento]) {
-      final Sesion sesion = sesionCon(rol);
+  group('Gate de administrativo (misma experiencia del estudiante)', () {
+    final Sesion sesion = sesionCon(RolEnum.administrativo);
 
-      test('${rol.nombreFirestore}: gestiona reportes', () {
-        for (final ruta in [
-          AppRoutes.inicioAdmin,
-          AppRoutes.perfilAdmin,
-          AppRoutes.danosReportados,
-          AppRoutes.misReportesAsignados,
-          AppRoutes.gestionReporte,
-          AppRoutes.notificacionesAdmin,
-          AppRoutes.editarPerfil,
-          AppRoutes.cambiarContrasena,
-          AppRoutes.reportarFalla,
-          if (rol == RolEnum.mantenimiento) AppRoutes.reportarDanos,
-        ]) {
-          expect(redireccionPorSesion(sesion, ruta), isNull, reason: ruta);
-        }
-      });
+    test('permite los módulos de estudiante', () {
+      for (final ruta in [
+        AppRoutes.inicioEstudiante,
+        AppRoutes.perfilEstudiante,
+        AppRoutes.reportarDanos,
+        AppRoutes.misReportes,
+        AppRoutes.notificacionesEstudiante,
+        AppRoutes.editarPerfil,
+        AppRoutes.cambiarContrasena,
+        AppRoutes.reportarFalla,
+        '${AppRoutes.detalleReporte}/abc123',
+      ]) {
+        expect(redireccionPorSesion(sesion, ruta), isNull, reason: ruta);
+      }
+    });
 
-      test('${rol.nombreFirestore}: no accede a gestión de usuarios ni '
-          'a fallas de la app', () {
-        for (final ruta in [
-          AppRoutes.gestionUsuarios,
-          AppRoutes.crearUsuario,
-          AppRoutes.exportarReportes,
-          AppRoutes.fallasApp,
+    test('no accede al panel de gestión ni al de superadministrador', () {
+      for (final ruta in [
+        AppRoutes.inicioAdmin,
+        AppRoutes.danosReportados,
+        AppRoutes.misReportesAsignados,
+        AppRoutes.gestionReporte,
+        AppRoutes.notificacionesAdmin,
+        AppRoutes.gestionUsuarios,
+        AppRoutes.crearUsuario,
+        AppRoutes.exportarReportes,
+        AppRoutes.fallasApp,
+      ]) {
+        expect(
+          redireccionPorSesion(sesion, ruta),
           AppRoutes.inicioEstudiante,
-          if (rol == RolEnum.administrativo) AppRoutes.reportarDanos,
-        ]) {
-          expect(
-            redireccionPorSesion(sesion, ruta),
-            AppRoutes.inicioAdmin,
-            reason: ruta,
-          );
-        }
-      });
-    }
+          reason: ruta,
+        );
+      }
+    });
+  });
+
+  group('Gate de mantenimiento', () {
+    final Sesion sesion = sesionCon(RolEnum.mantenimiento);
+
+    test('gestiona reportes y catálogos', () {
+      for (final ruta in [
+        AppRoutes.inicioAdmin,
+        AppRoutes.perfilAdmin,
+        AppRoutes.danosReportados,
+        AppRoutes.misReportesAsignados,
+        AppRoutes.gestionReporte,
+        AppRoutes.notificacionesAdmin,
+        AppRoutes.editarPerfil,
+        AppRoutes.cambiarContrasena,
+        AppRoutes.reportarFalla,
+        AppRoutes.reportarDanos,
+      ]) {
+        expect(redireccionPorSesion(sesion, ruta), isNull, reason: ruta);
+      }
+    });
+
+    test('no accede a gestión de usuarios ni a fallas de la app', () {
+      for (final ruta in [
+        AppRoutes.gestionUsuarios,
+        AppRoutes.crearUsuario,
+        AppRoutes.exportarReportes,
+        AppRoutes.fallasApp,
+        AppRoutes.inicioEstudiante,
+      ]) {
+        expect(
+          redireccionPorSesion(sesion, ruta),
+          AppRoutes.inicioAdmin,
+          reason: ruta,
+        );
+      }
+    });
   });
 
   group('Gate de superadministrador', () {

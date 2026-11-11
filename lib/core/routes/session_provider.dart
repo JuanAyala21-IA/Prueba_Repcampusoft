@@ -10,6 +10,7 @@ import '../../features/auth/domain/auth_repository.dart';
 import '../../features/auth/domain/auth_usuario.dart';
 import '../../features/auth/domain/registro_intentado.dart';
 import '../../features/auth/domain/rol_enum.dart';
+import '../../features/auth/domain/tipo_acceso.dart';
 import '../../features/auth/domain/usuario.dart';
 
 /// Estados de sesión según el gate de §5.3 de arquitectura.
@@ -94,8 +95,7 @@ class Sesion {
 
   bool get esSuperadministrador => rol == RolEnum.superadministrador;
 
-  bool get puedeGestionarReportes =>
-      rol == RolEnum.administrativo || rol == RolEnum.mantenimiento;
+  bool get puedeGestionarReportes => rol == RolEnum.mantenimiento;
 
   @override
   bool operator ==(Object other) {
@@ -126,6 +126,11 @@ class Sesion {
 class SesionController extends Notifier<Sesion> {
   StreamSubscription<AuthUsuario?>? _suscripcion;
 
+  /// Mientras se valida el tipo de acceso elegido en el login se ignoran los
+  /// eventos de `authStateChanges`: así la app no navega al tablero con una
+  /// cuenta que no corresponde y luego la expulsa.
+  bool _validandoAcceso = false;
+
   @override
   Sesion build() {
     final AuthRepository repo = ref.watch(authRepositoryProvider);
@@ -136,6 +141,7 @@ class SesionController extends Notifier<Sesion> {
   }
 
   Future<void> _resolverEstado(AuthUsuario? auth) async {
+    if (_validandoAcceso) return;
     if (auth == null) {
       state = const Sesion.sinSesion();
       return;
@@ -208,34 +214,125 @@ class SesionController extends Notifier<Sesion> {
     return null;
   }
 
+  /// Inicia sesión con correo y contraseña.
+  ///
+  /// [acceso] es el tipo elegido en la pantalla de login. Si se indica, se
+  /// valida contra el rol guardado en `users/{uid}` y, cuando no coincide, la
+  /// sesión se cierra y se devuelve el mensaje para el usuario. Sin [acceso]
+  /// (uso interno y pruebas) no se valida el tipo.
   Future<String?> iniciarSesion({
     required String correo,
     required String contrasena,
+    TipoAcceso? acceso,
   }) async {
     final AuthRepository repo = ref.read(authRepositoryProvider);
+    _validandoAcceso = true;
     try {
       await repo.iniciarSesion(correo: correo, contrasena: contrasena);
-      return null;
     } catch (error) {
-      return mensajeFirebase(error);
-    }
-  }
-
-  /// Inicia sesión o registra una cuenta con Google. El primer acceso queda
-  /// en `rolPendiente` para completar el perfil.
-  Future<String?> iniciarSesionConGoogle() async {
-    final AuthRepository repo = ref.read(authRepositoryProvider);
-    try {
-      await repo.iniciarSesionConGoogle();
-    } catch (error) {
+      _validandoAcceso = false;
       return mensajeFirebase(error);
     }
 
     final AuthUsuario? auth = repo.usuarioActual();
     if (auth == null) {
+      _validandoAcceso = false;
+      state = const Sesion.sinSesion();
+      return null;
+    }
+
+    String? errorAcceso;
+    try {
+      if (acceso != null) {
+        errorAcceso = await _validarAcceso(repo, auth, acceso);
+      }
+    } finally {
+      _validandoAcceso = false;
+    }
+    if (errorAcceso != null) return errorAcceso;
+
+    await _resolverEstado(auth);
+    return null;
+  }
+
+  /// Inicia sesión o registra una cuenta con Google. El primer acceso queda
+  /// en `rolPendiente` para completar el perfil. Cuando se indica [acceso] se
+  /// aplica la misma validación de rol que en el login por correo.
+  Future<String?> iniciarSesionConGoogle({TipoAcceso? acceso}) async {
+    final AuthRepository repo = ref.read(authRepositoryProvider);
+    _validandoAcceso = true;
+    try {
+      await repo.iniciarSesionConGoogle();
+    } catch (error) {
+      _validandoAcceso = false;
+      return mensajeFirebase(error);
+    }
+
+    final AuthUsuario? auth = repo.usuarioActual();
+    if (auth == null) {
+      _validandoAcceso = false;
       return 'No se pudo completar el inicio de sesión con Google. Inténtalo de nuevo.';
     }
+
+    String? errorAcceso;
+    try {
+      if (acceso != null) {
+        errorAcceso = await _validarAcceso(repo, auth, acceso);
+      }
+    } finally {
+      _validandoAcceso = false;
+    }
+    if (errorAcceso != null) return errorAcceso;
+
+    await _resolverEstado(auth);
     return null;
+  }
+
+  /// Verifica que el rol del perfil corresponda al [acceso] elegido.
+  ///
+  /// Devuelve `null` si el acceso es válido o el mensaje de error después de
+  /// cerrar la sesión. Los perfiles inexistentes se permiten solo en el acceso
+  /// de estudiante: el autorregistro siempre crea cuentas `persona`.
+  Future<String?> _validarAcceso(
+    AuthRepository repo,
+    AuthUsuario auth,
+    TipoAcceso acceso,
+  ) async {
+    Usuario? perfil;
+    try {
+      perfil = await repo.obtenerPerfil(auth.uid);
+    } catch (_) {
+      // Si no se pudo leer el perfil, el gate normal resolverá el estado
+      // (correo pendiente, perfil pendiente o cuenta bloqueada).
+      return null;
+    }
+
+    if (perfil == null) {
+      if (acceso == TipoAcceso.administrativo) {
+        await _cerrarPorAccesoInvalido(repo);
+        return 'No encontramos una cuenta administrativa con este correo. '
+            'Selecciona "Estudiante" o usa una cuenta creada por el '
+            'superadministrador.';
+      }
+      return null;
+    }
+
+    if (acceso.permite(perfil.rol)) return null;
+
+    await _cerrarPorAccesoInvalido(repo);
+    return 'Esta cuenta está registrada como ${perfil.rol.etiqueta}. '
+        'Cambia el tipo de acceso a "${TipoAcceso.paraRol(perfil.rol).etiqueta}".';
+  }
+
+  /// Cierra la sesión que no corresponde al acceso elegido sin propagar
+  /// errores de red: el estado local queda igualmente sin sesión.
+  Future<void> _cerrarPorAccesoInvalido(AuthRepository repo) async {
+    try {
+      await repo.cerrarSesion();
+    } catch (_) {
+      // El gate y las reglas vuelven a validar al reintentar.
+    }
+    state = const Sesion.sinSesion();
   }
 
   Future<String?> reenviarCorreoVerificacion() async {
