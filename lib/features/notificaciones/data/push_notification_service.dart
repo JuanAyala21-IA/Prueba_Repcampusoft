@@ -56,7 +56,12 @@ class PushNotificationService {
         if (sesion.estado == SesionEstado.rolAplicado && sesion.uid != null) {
           _registrarToken(sesion.uid!);
         } else {
+          // Al cerrar sesión (o quedar pendiente) se borra el token del
+          // usuario para que este dispositivo deje de recibir notificaciones
+          // de una cuenta que ya no está activa.
+          final String? uidAnterior = _uidActual;
           _detener();
+          if (uidAnterior != null) unawaited(_limpiarToken(uidAnterior));
         }
       });
 
@@ -87,7 +92,9 @@ class PushNotificationService {
 
   Future<void> _registrarToken(String uid) async {
     if (_uidActual == uid) return;
+    final String? uidAnterior = _uidActual;
     _uidActual = uid;
+    if (uidAnterior != null) await _limpiarToken(uidAnterior);
 
     final String? token = await _esperarToken(uid);
     if (token != null && _uidActual == uid) await _guardarToken(uid, token);
@@ -131,6 +138,15 @@ class PushNotificationService {
       await _firestore.collection('users').doc(uid).update({'fcmToken': token});
     } catch (e) {
       debugPrint('No se pudo guardar el token FCM: $e');
+    }
+  }
+
+  /// Borra el token del usuario que deja la sesión (best-effort).
+  Future<void> _limpiarToken(String uid) async {
+    try {
+      await _firestore.collection('users').doc(uid).update({'fcmToken': null});
+    } catch (e) {
+      debugPrint('No se pudo limpiar el token FCM: $e');
     }
   }
 
