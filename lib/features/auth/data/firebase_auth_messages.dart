@@ -49,17 +49,6 @@ String _mensajeAuth(FirebaseAuthException e) {
       return 'Ingresa tu correo institucional.';
     case 'google-sign-in-failed':
       return 'No se pudo iniciar sesión con Google. Inténtalo de nuevo.';
-    case 'popup-blocked':
-    case 'popup-blocked-by-browser':
-      return 'El navegador bloqueó la ventana de Google. Permite las ventanas '
-          'emergentes e inténtalo de nuevo.';
-    case 'unauthorized-domain':
-      return 'Este dominio no está autorizado para iniciar sesión. Contacta a '
-          'la institución.';
-    case 'invalid-api-key':
-    case 'api-key-not-valid':
-      return 'La configuración de Firebase no es válida para este sitio. '
-          'Contacta a la institución.';
     case 'quota-exceeded':
       return 'El servicio está saturado. Inténtalo más tarde.';
     default:

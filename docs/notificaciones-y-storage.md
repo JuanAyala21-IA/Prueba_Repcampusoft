@@ -20,8 +20,9 @@ Functions). Resumen de lo implementado.
 - **Lectura en la app** (`lib/features/reportes/data/media_reporte_loader.dart`):
   1. `base64` si existe (documentos antiguos).
   2. `downloadUrl` con token, descargada por HTTP (`descargarDesdeUrl`). Es la
-     vía principal porque no depende de que el SDK de Storage adjunte el token
-     de Firebase Auth; en web `getData` fallaba y la foto se veía vacía.
+     vía principal porque no depende de que el SDK de Storage resuelva
+     metadatos o adjunte el token de Firebase Auth; si eso falla, la foto se
+     veía vacía con el ícono de imagen.
   3. `storagePath` con el SDK de Storage como respaldo.
   Si hay imagen registrada pero ninguna vía funciona, la pantalla muestra
   «No se pudo cargar la imagen» con un botón **Reintentar**.

@@ -4,13 +4,10 @@
 //   flutterfire configure --project=repcampusoft --platforms=android,ios
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+    show defaultTargetPlatform, TargetPlatform;
 
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
-    if (kIsWeb) {
-      return web;
-    }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
@@ -39,14 +36,5 @@ class DefaultFirebaseOptions {
     androidClientId: '895201556108-b1hoa75brnp72a17nuc8qblsscgko2ps.apps.googleusercontent.com',
     iosClientId: '895201556108-io1s78v7a4vilr9478kp3advms7g588c.apps.googleusercontent.com',
     iosBundleId: 'co.edu.uts.repcampusoft',
-  );
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBjArb83NKkD1QTtdRk3ssppr9l5UmKtrM',
-    appId: '1:895201556108:web:a7ba6f856daae202a4eda9',
-    messagingSenderId: '895201556108',
-    projectId: 'repcampusoft',
-    authDomain: 'repcampusoft.firebaseapp.com',
-    storageBucket: 'repcampusoft.firebasestorage.app',
-    measurementId: 'G-ZC57WDCGZG',
   );
 }

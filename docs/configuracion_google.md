@@ -4,12 +4,11 @@ Guía para habilitar el acceso y registro con Google en REPCAMPUSOFT.
 El código ya está implementado; esta guía cubre lo que debe configurarse en
 Firebase y cómo verificar el flujo de extremo a extremo.
 
-> **Resumen:** en Android/iOS la app usa el **selector nativo de Google**
-> (`google_sign_in` + `signInWithCredential`). En **web** usa
-> `signInWithPopup` de Firebase Auth, porque `google_sign_in` no implementa
-> `authenticate()` en el navegador. No hay Client Secret en la app. No se
-> restringe el dominio del correo (decisión del proyecto); el rol
-> administrativo sigue dependiendo de `admins_permitidos`.
+> **Resumen:** la app usa el **selector nativo de Google** (`google_sign_in` +
+> `signInWithCredential`), no el flujo web de Firebase. No se abre Chrome y no
+> hay Client Secret en la app. No se restringe el dominio del correo (decisión
+> del proyecto); el rol administrativo sigue dependiendo de
+> `admins_permitidos`.
 
 ## 1. Datos del proyecto
 
@@ -158,34 +157,6 @@ archivos (hay que permitir «instalar apps desconocidas»).
 | `web-context-canceled` | El usuario cerró la hoja de cuentas | Es esperado: se muestra «Inicio de sesión cancelado.» |
 | `google-sign-in-failed` | Falló el selector nativo o no se recibió el ID token | Reintenta; revisa la configuración del §4 |
 | `network-request-failed` | Sin internet o DNS bloqueado | Revisa la conexión del dispositivo |
-
-## 8.1. Inicio de sesión en web
-
-La app también se ejecuta en navegador (`flutter build web --release`). En web:
-
-- **Correo y contraseña** funciona con el mismo proveedor de Firebase
-  Authentication. La `apiKey` web ya está en `lib/firebase_options.dart`.
-- **Google** usa `FirebaseAuth.signInWithPopup(GoogleAuthProvider())` con
-  `prompt=select_account`. No usa `google_sign_in`, porque en web ese paquete
-  no implementa `authenticate()`.
-- No se necesita Client ID en Dart ni etiqueta `<meta>` en `web/index.html`:
-  Firebase usa el cliente web del proveedor Google.
-- Si el navegador bloquea la ventana emergente, la app muestra un mensaje para
-  permitir las ventanas emergentes.
-
-Para que el popup funcione, en **Firebase Authentication → Settings →
-Authorized domains** deben estar el dominio de producción y, en desarrollo,
-`localhost`. En el cliente OAuth web también deben estar los **Authorized
-JavaScript origins** correspondientes (`http://localhost:<puerto>` y el dominio
-real).
-
-Errores frecuentes en web:
-
-| Código | Causa | Solución |
-| --- | --- | --- |
-| `popup-blocked` | El navegador bloqueó la ventana | Permite las ventanas emergentes para el sitio |
-| `unauthorized-domain` | El dominio no está en Authorized domains | Agrégalo en Firebase Authentication |
-| `invalid-api-key` | `apiKey` web incorrecta | Revisa `lib/firebase_options.dart` |
 
 ## 9. Seguridad y decisiones
 
