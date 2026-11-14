@@ -21,6 +21,7 @@ caigan en la carpeta de spam.
 | Dominio personalizado solicitado | `auth.repcampusoft.uts.edu.co` |
 | Estado del dominio | `IN_PROGRESS` (faltan los registros DNS) |
 | Acción URL (`callbackUri`) | `https://repcampusoft.firebaseapp.com/__/auth/action` |
+| Dominios autorizados | `localhost`, `repcampusoft.firebaseapp.com`, `repcampusoft.web.app`, `auth.repcampusoft.uts.edu.co` |
 
 Las cuatro plantillas ya están en español (plantillas localizadas de Firebase) y
 tienen `senderDisplayName = REPCAMPUSOFT` y `replyTo = noreply`.
