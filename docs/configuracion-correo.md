@@ -16,6 +16,7 @@ caigan en la carpeta de spam.
 | Proyecto Firebase | `repcampusoft` (número `895201556108`) |
 | Remitente por defecto | `noreply@repcampusoft.firebaseapp.com` |
 | Nombre visible | `REPCAMPUSOFT` |
+| Nombre en el texto (`%APP_NAME%`) | `project-895201556108` (marca OAuth, pendiente de cambiar) |
 | Método de envío | `DEFAULT` (Firebase) |
 | Idioma por defecto | `es` |
 | Dominio personalizado solicitado | `auth.repcampusoft.uts.edu.co` |
@@ -25,6 +26,29 @@ caigan en la carpeta de spam.
 
 Las cuatro plantillas ya están en español (plantillas localizadas de Firebase) y
 tienen `senderDisplayName = REPCAMPUSOFT` y `replyTo = noreply`.
+
+### Nombre que aparece en los correos (`%APP_NAME%`)
+
+El texto de las plantillas usa `%APP_NAME%`. Ese valor **no** sale del nombre del
+proyecto de Firebase ni del nombre visible del remitente: Firebase usa el nombre
+de la **marca OAuth** del proyecto. Como la marca se creó automáticamente al
+registrar la app Android, se llama `project-895201556108`, y por eso el asunto
+llega como «Cambia la contraseña de project-895201556108».
+
+Para corregirlo (una sola vez, desde la consola):
+
+1. Entra a <https://console.cloud.google.com/auth/branding?project=repcampusoft>.
+2. En **App information → App name** escribe `REPCAMPUSOFT`.
+3. Guarda. Si la consola pide **Verify branding** y luego **Publish branding**,
+   completa ese paso.
+4. Vuelve a pedir un restablecimiento de contraseña y confirma que el asunto dice
+   «Cambia la contraseña de REPCAMPUSOFT».
+
+Ruta alternativa: Firebase Console → **Project settings** → **General** →
+**Public-facing name**.
+
+No existe una API pública para cambiar ese nombre (la antigua API de marcas de
+IAP quedó restringida y exige una organización), así que este ajuste es manual.
 
 ## 2. Registros DNS que debe crear TI de la UTS
 
@@ -132,6 +156,8 @@ Si se necesita un texto propio, hay dos caminos:
 - Cambiar el idioma: `notification.defaultLocale` (`es`).
 - El `replyTo` es `noreply` porque todavía no hay un buzón real. Cuando exista
   (por ejemplo `soporte@uts.edu.co`), actualizarlo en las cuatro plantillas.
+- El nombre que sale dentro del texto (`%APP_NAME%`) se cambia en la marca OAuth
+  (Google Auth Platform → Branding → App name), no en las plantillas.
 - Este cambio no afecta las notificaciones push de los reportes: esas viajan por
   FCM, no por correo.
 
