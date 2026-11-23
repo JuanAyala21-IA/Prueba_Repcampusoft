@@ -16,6 +16,8 @@ import '../data/providers/usuario_providers.dart';
 
 /// Formulario del superadministrador para crear una cuenta con rol
 /// `persona`, `administrativo` o `mantenimiento`.
+///
+/// Los campos de cargo y dependencia solo aplican al rol administrativo.
 class CreateUserScreen extends ConsumerStatefulWidget {
   const CreateUserScreen({super.key});
 
@@ -50,6 +52,7 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _creando = true);
+    final bool esAdministrativo = _rol == RolEnum.administrativo;
     final Result<Usuario> resultado = await ref
         .read(usuarioRepositoryProvider)
         .crearUsuario(
@@ -57,8 +60,9 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
           correo: _correo.text,
           contrasena: _contrasena.text,
           rol: _rol,
-          cargo: _cargo.text,
-          dependencia: _dependencia.text,
+          // Cargo y dependencia solo existen para cuentas administrativas.
+          cargo: esAdministrativo ? _cargo.text : null,
+          dependencia: esAdministrativo ? _dependencia.text : null,
           telefono: _telefono.text,
         );
     if (!mounted) return;
@@ -96,7 +100,7 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool esPersonal = _rol.esPersonal;
+    final bool esAdministrativo = _rol == RolEnum.administrativo;
     return Scaffold(
       body: CurvedGreenBackground(
         child: SafeArea(
@@ -152,9 +156,17 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
                         const SizedBox(height: 6),
                         _SelectorRol(
                           rol: _rol,
-                          onChanged: (rol) => setState(() => _rol = rol),
+                          onChanged: (rol) => setState(() {
+                            _rol = rol;
+                            if (rol != RolEnum.administrativo) {
+                              // Al cambiar a un rol sin cargo/dependencia se
+                              // limpian para no enviar datos ocultos.
+                              _cargo.clear();
+                              _dependencia.clear();
+                            }
+                          }),
                         ),
-                        if (esPersonal) ...[
+                        if (esAdministrativo) ...[
                           const SizedBox(height: 16),
                           LabelledField(
                             etiqueta: 'Cargo',

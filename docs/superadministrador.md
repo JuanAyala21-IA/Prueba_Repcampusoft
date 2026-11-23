@@ -46,7 +46,9 @@ Firestore y luego se registra normalmente en la app:
 1. Inicia sesión como superadministrador.
 2. En el dashboard entra a **Gestión de usuarios → Crear usuario**.
 3. Completa nombre, correo institucional, contraseña inicial y rol
-   (Estudiante, Administrativo o Mantenimiento).
+   (Estudiante, Administrativo o Mantenimiento). Los campos **Cargo** y
+   **Dependencia / Área** solo aparecen cuando el rol es Administrativo; para
+   Estudiante y Mantenimiento se ocultan y no se envían.
 4. La app crea la cuenta en Firebase Auth con una instancia secundaria, envía
    el correo de verificación y escribe `users/{uid}` con `activo: true`.
 5. La persona debe confirmar su correo antes de entrar al sistema.

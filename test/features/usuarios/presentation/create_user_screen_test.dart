@@ -99,6 +99,36 @@ void main() {
       expect(find.text('Dependencia / Área'), findsOneWidget);
     });
 
+    testWidgets('mantenimiento no muestra cargo ni dependencia', (
+      tester,
+    ) async {
+      final repo = FakeUsuarioRepository();
+      await abrirFormulario(tester, repo);
+
+      await tester.tap(find.text('Mantenimiento'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cargo'), findsNothing);
+      expect(find.text('Dependencia / Área'), findsNothing);
+    });
+
+    testWidgets(
+      'al cambiar de administrativo a mantenimiento se ocultan los campos',
+      (tester) async {
+        final repo = FakeUsuarioRepository();
+        await abrirFormulario(tester, repo);
+
+        await tester.tap(find.text('Administrativo'));
+        await tester.pumpAndSettle();
+        expect(find.text('Cargo'), findsOneWidget);
+
+        await tester.tap(find.text('Mantenimiento'));
+        await tester.pumpAndSettle();
+        expect(find.text('Cargo'), findsNothing);
+        expect(find.text('Dependencia / Área'), findsNothing);
+      },
+    );
+
     testWidgets('crea la cuenta con el rol seleccionado', (tester) async {
       final repo = FakeUsuarioRepository();
       await abrirFormulario(tester, repo);
@@ -118,6 +148,9 @@ void main() {
       expect(repo.creaciones.single.nombre, 'Ana Estudiante');
       expect(repo.creaciones.single.correo, 'ana@uts.edu.co');
       expect(repo.creaciones.single.contrasena, 'secreta123');
+      // Mantenimiento no maneja cargo ni dependencia.
+      expect(repo.creaciones.single.cargo, isNull);
+      expect(repo.creaciones.single.dependencia, isNull);
 
       expect(find.text('Cuenta creada'), findsOneWidget);
       expect(find.textContaining('Mantenimiento'), findsWidgets);
