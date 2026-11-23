@@ -43,8 +43,8 @@ class Notificacion {
     return Notificacion(
       id: doc.id,
       tipo: parseTipo(data['tipo']),
-      titulo: data['titulo'] as String,
-      mensaje: data['mensaje'] as String,
+      titulo: corregirTexto(data['titulo'] as String),
+      mensaje: corregirTexto(data['mensaje'] as String),
       reportId: data['reportId'] as String?,
       evento: parseEvento(data['evento']),
       estadoNuevo: data['estadoNuevo'] as String?,
@@ -55,6 +55,19 @@ class Notificacion {
       creadoEn: data['creadoEn'] as Timestamp,
       leida: leida,
     );
+  }
+
+  /// Corrige textos heredados con «dano»/«danos» sin tilde.
+  ///
+  /// Las notificaciones son inmutables en Firestore y algunas se crearon con
+  /// «Nuevo reporte de dano». Se normalizan al leerlas para no tener que
+  /// reescribir documentos del pasado. No toca palabras como «dañado».
+  static String corregirTexto(String texto) {
+    return texto
+        .replaceAll(RegExp(r'\bDano\b'), 'Daño')
+        .replaceAll(RegExp(r'\bdano\b'), 'daño')
+        .replaceAll(RegExp(r'\bDanos\b'), 'Daños')
+        .replaceAll(RegExp(r'\bdanos\b'), 'daños');
   }
 
   static NotificacionTipo parseTipo(String? value) {

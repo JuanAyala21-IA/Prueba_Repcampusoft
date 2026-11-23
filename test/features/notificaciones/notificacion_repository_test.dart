@@ -257,5 +257,34 @@ void main() {
         );
       },
     );
+
+    test('normaliza títulos heredados con «dano» sin tilde', () async {
+      await seedNotifications(
+        uid: testUid,
+        isAdmin: false,
+        customNotifications: <Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 'notif-legado',
+            'tipo': 'reporte',
+            'titulo': 'Nuevo reporte de dano',
+            'mensaje': 'Un equipo dañado en el aula.',
+            'reportId': 'rep-legado',
+            'evento': 'creado',
+            'uidDestino': testUid,
+            'destinoRol': null,
+            'autorUid': 'admin-1',
+            'creadoEn': Timestamp.now(),
+          },
+        ],
+      );
+
+      final notificaciones = await repo
+          .watchNotificacionesEstudiante(testUid)
+          .first;
+
+      expect(notificaciones.single.titulo, 'Nuevo reporte de daño');
+      // No debe alterar palabras correctas como «dañado».
+      expect(notificaciones.single.mensaje, 'Un equipo dañado en el aula.');
+    });
   });
 }

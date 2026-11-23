@@ -119,7 +119,7 @@ class FirebaseReporteRepository implements ReporteRepository {
     final String notifId = '${reporteId}_creado';
     final Map<String, Object?> datosNotif = {
       'tipo': 'reporte',
-      'titulo': 'Nuevo reporte de dano',
+      'titulo': 'Nuevo reporte de daño',
       'mensaje':
           'Se registró tu reporte de ${borrador.tipoDano} en '
           '$ubicacionTexto.',

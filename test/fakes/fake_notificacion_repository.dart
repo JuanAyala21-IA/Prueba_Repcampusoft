@@ -234,8 +234,8 @@ class FakeNotificacionRepository implements NotificacionRepository {
         Notificacion(
           id: doc.id,
           tipo: Notificacion.parseTipo(tipoStr),
-          titulo: data['titulo'] as String,
-          mensaje: data['mensaje'] as String,
+          titulo: Notificacion.corregirTexto(data['titulo'] as String),
+          mensaje: Notificacion.corregirTexto(data['mensaje'] as String),
           reportId: data['reportId'] as String?,
           evento: Notificacion.parseEvento(data['evento']),
           estadoNuevo: data['estadoNuevo'] as String?,

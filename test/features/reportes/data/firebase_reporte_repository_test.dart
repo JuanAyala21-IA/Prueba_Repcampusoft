@@ -114,6 +114,7 @@ void main() {
         expect(notifDoc.exists, isTrue);
         final notifData = notifDoc.data()!;
         expect(notifData['tipo'], 'reporte');
+        expect(notifData['titulo'], 'Nuevo reporte de daño');
         expect(notifData['reportId'], reportId);
         expect(notifData['evento'], 'creado');
         expect(notifData['estadoNuevo'], 'Pendiente');
