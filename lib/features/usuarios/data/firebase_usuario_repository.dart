@@ -29,15 +29,12 @@ class FirebaseUsuarioRepository implements UsuarioRepository {
   @override
   Stream<List<Usuario>> watchUsuarios() {
     return _firestore.collection('users').snapshots().map((snapshot) {
-      final usuarios =
-          snapshot.docs
-              .map(_mapUsuario)
-              .where((usuario) => usuario.activo)
-              .toList()
-            ..sort(
-              (a, b) =>
-                  a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()),
-            );
+      final usuarios = snapshot.docs.map(_mapUsuario).toList()
+        ..sort((a, b) {
+          // Activos primero; dentro de cada estado, por nombre.
+          if (a.activo != b.activo) return a.activo ? -1 : 1;
+          return a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase());
+        });
       return usuarios;
     });
   }
@@ -167,6 +164,25 @@ class FirebaseUsuarioRepository implements UsuarioRepository {
       await _firestore.collection('users').doc(usuario.uid).update({
         'activo': false,
         'eliminadoEn': FieldValue.serverTimestamp(),
+        'actualizadoEn': FieldValue.serverTimestamp(),
+      });
+      return const Success(null);
+    } on FirebaseException catch (error) {
+      return Failure(mensajeFirebase(error));
+    }
+  }
+
+  @override
+  Future<Result<void>> reactivarUsuario(Usuario usuario) async {
+    if (usuario.rol == RolEnum.superadministrador) {
+      return const Failure(
+        'El superadministrador no se puede reactivar desde la app.',
+      );
+    }
+    try {
+      await _firestore.collection('users').doc(usuario.uid).update({
+        'activo': true,
+        'reactivadoEn': FieldValue.serverTimestamp(),
         'actualizadoEn': FieldValue.serverTimestamp(),
       });
       return const Success(null);

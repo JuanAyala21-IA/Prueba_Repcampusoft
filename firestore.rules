@@ -146,14 +146,22 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['nombre', 'telefono', 'cargo', 'dependencia', 'fcmToken', 'actualizadoEn']);
 
-      // Baja lógica del superadministrador: la cuenta de Auth se conserva para
-      // auditoría y el gate de sesión bloquea el acceso.
+      // Cambio de estado por el superadministrador: baja lógica (`activo:
+      // false`) y reactivación (`activo: true`). La cuenta de Auth se conserva
+      // para auditoría; el gate de sesión bloquea el acceso cuando está inactiva.
       allow update: if isSuperadministrador()
         && request.auth.uid != uid
         && resource.data.rol != 'superadministrador'
+        && request.resource.data.rol == resource.data.rol
+        && request.resource.data.correo == resource.data.correo
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['activo', 'eliminadoEn', 'actualizadoEn'])
-        && request.resource.data.activo == false;
+             .hasOnly([
+               'activo',
+               'eliminadoEn',
+               'reactivadoEn',
+               'actualizadoEn',
+             ])
+        && request.resource.data.activo is bool;
 
       allow delete: if false;
 

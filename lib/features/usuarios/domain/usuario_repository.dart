@@ -7,8 +7,8 @@ import '../../auth/domain/usuario.dart';
 /// público; este repositorio cubre la creación/eliminación de estudiantes,
 /// administrativos y encargados de mantenimiento desde el panel.
 abstract interface class UsuarioRepository {
-  /// Observa todos los usuarios activos (los eliminados se conservan como
-  /// registro histórico con `activo == false`).
+  /// Observa todos los usuarios, incluidos los deshabilitados (se conservan
+  /// como registro histórico con `activo == false`).
   Stream<List<Usuario>> watchUsuarios();
 
   /// Crea la cuenta de Firebase Auth y el perfil `users/{uid}` con el rol
@@ -27,4 +27,7 @@ abstract interface class UsuarioRepository {
   /// de sesión bloquea el acceso y las reglas de Firestore bloquean sus
   /// operaciones.
   Future<Result<void>> eliminarUsuario(Usuario usuario);
+
+  /// Reactiva una cuenta deshabilitada para que pueda volver a iniciar sesión.
+  Future<Result<void>> reactivarUsuario(Usuario usuario);
 }

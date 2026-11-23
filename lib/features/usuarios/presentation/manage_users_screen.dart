@@ -12,7 +12,10 @@ import '../../auth/domain/rol_enum.dart';
 import '../../auth/domain/usuario.dart';
 import '../data/providers/usuario_providers.dart';
 
-/// Panel del superadministrador para crear y deshabilitar cuentas de
+/// Filtro de la lista por estado de la cuenta.
+enum _FiltroUsuarios { todos, activos, deshabilitados }
+
+/// Panel del superadministrador para crear, deshabilitar y reactivar cuentas de
 /// estudiantes, administrativos y encargados de mantenimiento.
 class ManageUsersScreen extends ConsumerStatefulWidget {
   const ManageUsersScreen({super.key});
@@ -23,6 +26,7 @@ class ManageUsersScreen extends ConsumerStatefulWidget {
 
 class _ManageUsersScreenState extends ConsumerState<ManageUsersScreen> {
   final TextEditingController _busquedaCtrl = TextEditingController();
+  _FiltroUsuarios _filtro = _FiltroUsuarios.todos;
 
   @override
   void dispose() {
@@ -30,11 +34,19 @@ class _ManageUsersScreenState extends ConsumerState<ManageUsersScreen> {
     super.dispose();
   }
 
-  /// Filtra por correo sin distinguir mayúsculas/minúsculas ni espacios.
+  /// Aplica el filtro de estado y la búsqueda por correo (sin distinguir
+  /// mayúsculas/minúsculas ni espacios).
   List<Usuario> _filtrar(List<Usuario> usuarios) {
+    final List<Usuario> porEstado = switch (_filtro) {
+      _FiltroUsuarios.todos => usuarios,
+      _FiltroUsuarios.activos =>
+        usuarios.where((usuario) => usuario.activo).toList(),
+      _FiltroUsuarios.deshabilitados =>
+        usuarios.where((usuario) => !usuario.activo).toList(),
+    };
     final String consulta = _busquedaCtrl.text.trim().toLowerCase();
-    if (consulta.isEmpty) return usuarios;
-    return usuarios
+    if (consulta.isEmpty) return porEstado;
+    return porEstado
         .where((usuario) => usuario.correo.toLowerCase().contains(consulta))
         .toList();
   }
@@ -44,6 +56,8 @@ class _ManageUsersScreenState extends ConsumerState<ManageUsersScreen> {
     final AsyncValue<List<Usuario>> usuariosAsync = ref.watch(
       usuariosGestionProvider,
     );
+    final List<Usuario> usuarios =
+        usuariosAsync.value ?? const <Usuario>[];
 
     return Scaffold(
       body: CurvedGreenBackground(
@@ -52,7 +66,7 @@ class _ManageUsersScreenState extends ConsumerState<ManageUsersScreen> {
             children: [
               const UtsHeader(
                 titulo: 'Gestión de usuarios',
-                subtitulo: 'Crea y deshabilita cuentas',
+                subtitulo: 'Consulta, deshabilita y reactiva cuentas',
                 mostrarLogo: false,
               ),
               Padding(
@@ -90,7 +104,46 @@ class _ManageUsersScreenState extends ConsumerState<ManageUsersScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      _FiltroChip(
+                        etiqueta: 'Todos',
+                        cantidad: usuarios.length,
+                        seleccionado: _filtro == _FiltroUsuarios.todos,
+                        onSelected: () =>
+                            setState(() => _filtro = _FiltroUsuarios.todos),
+                      ),
+                      _FiltroChip(
+                        etiqueta: 'Activos',
+                        cantidad: usuarios
+                            .where((usuario) => usuario.activo)
+                            .length,
+                        seleccionado: _filtro == _FiltroUsuarios.activos,
+                        onSelected: () =>
+                            setState(() => _filtro = _FiltroUsuarios.activos),
+                      ),
+                      _FiltroChip(
+                        etiqueta: 'Deshabilitados',
+                        cantidad: usuarios
+                            .where((usuario) => !usuario.activo)
+                            .length,
+                        seleccionado: _filtro == _FiltroUsuarios.deshabilitados,
+                        onSelected: () => setState(
+                          () => _filtro = _FiltroUsuarios.deshabilitados,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
               Expanded(
                 child: usuariosAsync.when(
                   loading: () =>
@@ -103,7 +156,15 @@ class _ManageUsersScreenState extends ConsumerState<ManageUsersScreen> {
                     }
                     final List<Usuario> filtrados = _filtrar(usuarios);
                     if (filtrados.isEmpty) {
-                      return const _SinResultadosBusqueda();
+                      if (_busquedaCtrl.text.trim().isNotEmpty) {
+                        return const _SinResultadosBusqueda();
+                      }
+                      return _ListaUsuariosVacia(
+                        mensaje: _filtro == _FiltroUsuarios.deshabilitados
+                            ? 'No hay cuentas deshabilitadas.'
+                            : 'No hay cuentas activas.',
+                        detalle: 'Cambia el filtro para ver otras cuentas.',
+                      );
                     }
                     return ListView.separated(
                       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
@@ -113,13 +174,22 @@ class _ManageUsersScreenState extends ConsumerState<ManageUsersScreen> {
                         final Usuario usuario = filtrados[index];
                         return _UsuarioCard(
                           usuario: usuario,
-                          onEliminar: usuario.esSuperadministrador
-                              ? null
-                              : () => _confirmarEliminacion(
+                          onDeshabilitar:
+                              usuario.activo && !usuario.esSuperadministrador
+                              ? () => _confirmarDeshabilitacion(
                                   context,
                                   ref,
                                   usuario,
-                                ),
+                                )
+                              : null,
+                          onReactivar:
+                              !usuario.activo && !usuario.esSuperadministrador
+                              ? () => _confirmarReactivacion(
+                                  context,
+                                  ref,
+                                  usuario,
+                                )
+                              : null,
                         );
                       },
                     );
@@ -133,7 +203,7 @@ class _ManageUsersScreenState extends ConsumerState<ManageUsersScreen> {
     );
   }
 
-  Future<void> _confirmarEliminacion(
+  Future<void> _confirmarDeshabilitacion(
     BuildContext context,
     WidgetRef ref,
     Usuario usuario,
@@ -144,7 +214,7 @@ class _ManageUsersScreenState extends ConsumerState<ManageUsersScreen> {
         title: const Text('Deshabilitar cuenta'),
         content: Text(
           '¿Deseas deshabilitar la cuenta de ${usuario.nombre} '
-          '(${usuario.correo})? No podrá volver a iniciar sesión.',
+          '(${usuario.correo})? No podrá iniciar sesión hasta que la reactives.',
         ),
         actions: [
           TextButton(
@@ -167,11 +237,61 @@ class _ManageUsersScreenState extends ConsumerState<ManageUsersScreen> {
         .read(usuarioRepositoryProvider)
         .eliminarUsuario(usuario);
     if (!context.mounted) return;
+    _mostrarResultado(
+      context,
+      resultado,
+      exito: 'Cuenta deshabilitada correctamente.',
+    );
+  }
+
+  Future<void> _confirmarReactivacion(
+    BuildContext context,
+    WidgetRef ref,
+    Usuario usuario,
+  ) async {
+    final bool? confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reactivar cuenta'),
+        content: Text(
+          '¿Deseas reactivar la cuenta de ${usuario.nombre} '
+          '(${usuario.correo})? Podrá volver a iniciar sesión.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Reactivar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true || !context.mounted) return;
+
+    final Result<void> resultado = await ref
+        .read(usuarioRepositoryProvider)
+        .reactivarUsuario(usuario);
+    if (!context.mounted) return;
+    _mostrarResultado(
+      context,
+      resultado,
+      exito: 'Cuenta reactivada correctamente.',
+    );
+  }
+
+  void _mostrarResultado(
+    BuildContext context,
+    Result<void> resultado, {
+    required String exito,
+  }) {
     switch (resultado) {
       case Success():
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cuenta deshabilitada correctamente.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(exito)));
       case Failure():
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -183,11 +303,48 @@ class _ManageUsersScreenState extends ConsumerState<ManageUsersScreen> {
   }
 }
 
+/// Chip de filtro con el número de cuentas que representa.
+class _FiltroChip extends StatelessWidget {
+  const _FiltroChip({
+    required this.etiqueta,
+    required this.cantidad,
+    required this.seleccionado,
+    required this.onSelected,
+  });
+
+  final String etiqueta;
+  final int cantidad;
+  final bool seleccionado;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      label: Text('$etiqueta ($cantidad)'),
+      selected: seleccionado,
+      onSelected: (_) => onSelected(),
+      selectedColor: AppColors.utsGreen,
+      labelStyle: AppTypography.textTheme.bodySmall?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary,
+      ),
+      side: const BorderSide(color: AppColors.divider),
+      backgroundColor: AppColors.background,
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
 class _UsuarioCard extends StatelessWidget {
-  const _UsuarioCard({required this.usuario, this.onEliminar});
+  const _UsuarioCard({
+    required this.usuario,
+    this.onDeshabilitar,
+    this.onReactivar,
+  });
 
   final Usuario usuario;
-  final VoidCallback? onEliminar;
+  final VoidCallback? onDeshabilitar;
+  final VoidCallback? onReactivar;
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +368,7 @@ class _UsuarioCard extends StatelessWidget {
             backgroundColor: AppColors.surface,
             child: Icon(
               _iconoPorRol(usuario.rol),
-              color: AppColors.textPrimary,
+              color: usuario.activo ? AppColors.textPrimary : Colors.grey,
             ),
           ),
           const SizedBox(width: 14),
@@ -226,17 +383,33 @@ class _UsuarioCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(usuario.correo, style: AppTypography.textTheme.bodySmall),
                 const SizedBox(height: 6),
-                _RolChip(rol: usuario.rol),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    _RolChip(rol: usuario.rol),
+                    _EstadoChip(activo: usuario.activo),
+                  ],
+                ),
               ],
             ),
           ),
-          if (onEliminar != null)
+          if (onDeshabilitar != null)
             IconButton(
               tooltip: 'Deshabilitar cuenta',
-              onPressed: onEliminar,
+              onPressed: onDeshabilitar,
               icon: const Icon(
                 Icons.person_remove_outlined,
                 color: AppColors.estadoPendiente,
+              ),
+            ),
+          if (onReactivar != null)
+            IconButton(
+              tooltip: 'Reactivar cuenta',
+              onPressed: onReactivar,
+              icon: const Icon(
+                Icons.how_to_reg_outlined,
+                color: AppColors.welcomeBackground,
               ),
             ),
         ],
@@ -278,8 +451,39 @@ class _RolChip extends StatelessWidget {
   }
 }
 
+/// Etiqueta Activo/Deshabilitado de la cuenta.
+class _EstadoChip extends StatelessWidget {
+  const _EstadoChip({required this.activo});
+
+  final bool activo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: activo ? AppColors.utsGreen : AppColors.grisOscuro,
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: Text(
+        activo ? 'Activo' : 'Deshabilitado',
+        style: AppTypography.textTheme.bodySmall?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: activo ? AppColors.textPrimary : Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
 class _ListaUsuariosVacia extends StatelessWidget {
-  const _ListaUsuariosVacia();
+  const _ListaUsuariosVacia({
+    this.mensaje = 'No hay usuarios registrados',
+    this.detalle = 'Crea la primera cuenta desde el botón superior.',
+  });
+
+  final String mensaje;
+  final String detalle;
 
   @override
   Widget build(BuildContext context) {
@@ -291,13 +495,10 @@ class _ListaUsuariosVacia extends StatelessWidget {
           children: [
             const Icon(Icons.people_outline, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            Text(
-              'No hay usuarios activos',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text(mensaje, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
-              'Crea la primera cuenta desde el botón superior.',
+              detalle,
               style: AppTypography.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),

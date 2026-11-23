@@ -17,8 +17,15 @@ Usuario _usuario({
   required String uid,
   required String nombre,
   required RolEnum rol,
+  bool activo = true,
 }) {
-  return Usuario(uid: uid, nombre: nombre, correo: '$uid@uts.edu.co', rol: rol);
+  return Usuario(
+    uid: uid,
+    nombre: nombre,
+    correo: '$uid@uts.edu.co',
+    rol: rol,
+    activo: activo,
+  );
 }
 
 void main() {
@@ -73,6 +80,9 @@ void main() {
       expect(find.text('Estudiante'), findsOneWidget);
       expect(find.text('Administrativo'), findsOneWidget);
       expect(find.text('Mantenimiento'), findsOneWidget);
+      // Los tres están activos.
+      expect(find.text('Activo'), findsNWidgets(3));
+      expect(find.text('Deshabilitado'), findsNothing);
       // Todos son deshabilitables.
       expect(find.byTooltip('Deshabilitar cuenta'), findsNWidgets(3));
     });
@@ -106,7 +116,7 @@ void main() {
       await tester.pumpWidget(crearApp(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('No hay usuarios activos'), findsOneWidget);
+      expect(find.text('No hay usuarios registrados'), findsOneWidget);
     });
 
     testWidgets('muestra error si falla la carga', (tester) async {
@@ -242,6 +252,148 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('No autorizado'), findsOneWidget);
+    });
+
+    testWidgets('muestra también las cuentas deshabilitadas', (tester) async {
+      final repo = FakeUsuarioRepository(
+        usuarios: [
+          _usuario(uid: 'est', nombre: 'Ana Estudiante', rol: RolEnum.persona),
+          _usuario(
+            uid: 'adm',
+            nombre: 'Luis Administrativo',
+            rol: RolEnum.administrativo,
+            activo: false,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(crearApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ana Estudiante'), findsOneWidget);
+      expect(find.text('Luis Administrativo'), findsOneWidget);
+      expect(find.text('Activo'), findsOneWidget);
+      expect(find.text('Deshabilitado'), findsOneWidget);
+      expect(find.byTooltip('Deshabilitar cuenta'), findsOneWidget);
+      expect(find.byTooltip('Reactivar cuenta'), findsOneWidget);
+    });
+
+    testWidgets('el filtro Deshabilitados oculta las cuentas activas', (
+      tester,
+    ) async {
+      final repo = FakeUsuarioRepository(
+        usuarios: [
+          _usuario(uid: 'est', nombre: 'Ana Estudiante', rol: RolEnum.persona),
+          _usuario(
+            uid: 'adm',
+            nombre: 'Luis Administrativo',
+            rol: RolEnum.administrativo,
+            activo: false,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(crearApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Deshabilitados (1)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ana Estudiante'), findsNothing);
+      expect(find.text('Luis Administrativo'), findsOneWidget);
+    });
+
+    testWidgets('el filtro Activos oculta las cuentas deshabilitadas', (
+      tester,
+    ) async {
+      final repo = FakeUsuarioRepository(
+        usuarios: [
+          _usuario(uid: 'est', nombre: 'Ana Estudiante', rol: RolEnum.persona),
+          _usuario(
+            uid: 'adm',
+            nombre: 'Luis Administrativo',
+            rol: RolEnum.administrativo,
+            activo: false,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(crearApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Activos (1)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ana Estudiante'), findsOneWidget);
+      expect(find.text('Luis Administrativo'), findsNothing);
+    });
+
+    testWidgets('confirmar el diálogo reactiva la cuenta', (tester) async {
+      final usuario = _usuario(
+        uid: 'est',
+        nombre: 'Ana Estudiante',
+        rol: RolEnum.persona,
+        activo: false,
+      );
+      final repo = FakeUsuarioRepository(usuarios: [usuario]);
+
+      await tester.pumpWidget(crearApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Reactivar cuenta'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reactivar cuenta'), findsOneWidget);
+      expect(find.textContaining('Ana Estudiante'), findsWidgets);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Reactivar'));
+      await tester.pumpAndSettle();
+
+      expect(repo.reactivados, hasLength(1));
+      expect(repo.reactivados.single.uid, 'est');
+      expect(find.text('Cuenta reactivada correctamente.'), findsOneWidget);
+    });
+
+    testWidgets('si la reactivación falla muestra el mensaje', (tester) async {
+      final repo = FakeUsuarioRepository(
+        usuarios: [
+          _usuario(
+            uid: 'est',
+            nombre: 'Ana Estudiante',
+            rol: RolEnum.persona,
+            activo: false,
+          ),
+        ],
+        resultadoReactivacion: const Failure<void>('No autorizado'),
+      );
+
+      await tester.pumpWidget(crearApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Reactivar cuenta'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Reactivar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No autorizado'), findsOneWidget);
+    });
+
+    testWidgets('el superadministrador no muestra acciones', (tester) async {
+      final repo = FakeUsuarioRepository(
+        usuarios: [
+          _usuario(
+            uid: 'super',
+            nombre: 'Súper Admin',
+            rol: RolEnum.superadministrador,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(crearApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('Deshabilitar cuenta'), findsNothing);
+      expect(find.byTooltip('Reactivar cuenta'), findsNothing);
     });
   });
 }

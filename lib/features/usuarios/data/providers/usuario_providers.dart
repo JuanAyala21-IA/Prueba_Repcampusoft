@@ -9,8 +9,9 @@ final usuarioRepositoryProvider = Provider<UsuarioRepository>((ref) {
   return FirebaseUsuarioRepository();
 });
 
-/// Usuarios activos en tiempo real. Solo el superadministrador consume este
-/// provider; el guard del router impide que otros roles abran la pantalla.
+/// Todos los usuarios (activos y deshabilitados) en tiempo real. Solo el
+/// superadministrador consume este provider; el guard del router impide que
+/// otros roles abran la pantalla.
 final usuariosGestionProvider = StreamProvider<List<Usuario>>((ref) {
   return ref.watch(usuarioRepositoryProvider).watchUsuarios();
 });

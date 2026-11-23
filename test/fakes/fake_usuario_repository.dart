@@ -32,6 +32,7 @@ class FakeUsuarioRepository implements UsuarioRepository {
     List<Usuario> usuarios = const <Usuario>[],
     this.resultadoCreacion,
     this.resultadoEliminacion = const Success<void>(null),
+    this.resultadoReactivacion = const Success<void>(null),
   }) : _usuarios = List<Usuario>.of(usuarios);
 
   final StreamController<List<Usuario>> _controller =
@@ -43,10 +44,12 @@ class FakeUsuarioRepository implements UsuarioRepository {
   /// Si es `null`, la creación devuelve un [Success] con el usuario creado.
   Result<Usuario>? resultadoCreacion;
   Result<void> resultadoEliminacion;
+  Result<void> resultadoReactivacion;
 
   final List<CreacionUsuarioRegistrada> creaciones =
       <CreacionUsuarioRegistrada>[];
   final List<Usuario> eliminados = <Usuario>[];
+  final List<Usuario> reactivados = <Usuario>[];
 
   void emitir(List<Usuario> usuarios) {
     _usuarios = List<Usuario>.of(usuarios);
@@ -110,5 +113,11 @@ class FakeUsuarioRepository implements UsuarioRepository {
   Future<Result<void>> eliminarUsuario(Usuario usuario) async {
     eliminados.add(usuario);
     return resultadoEliminacion;
+  }
+
+  @override
+  Future<Result<void>> reactivarUsuario(Usuario usuario) async {
+    reactivados.add(usuario);
+    return resultadoReactivacion;
   }
 }

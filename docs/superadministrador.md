@@ -51,23 +51,35 @@ Firestore y luego se registra normalmente en la app:
    el correo de verificación y escribe `users/{uid}` con `activo: true`.
 5. La persona debe confirmar su correo antes de entrar al sistema.
 
-## Deshabilitar cuentas
+## Deshabilitar y reactivar cuentas
 
 La app no puede borrar cuentas de Firebase Auth ajenas sin Admin SDK/Cloud
-Functions (plan Blaze). Por eso la eliminación es **lógica**:
+Functions (plan Blaze). Por eso la baja es **lógica** y reversible:
 
-- Se marca `users/{uid}.activo = false` y `eliminadoEn`.
-- El gate de sesión muestra la pantalla **Cuenta deshabilitada**.
+- **Deshabilitar** marca `users/{uid}.activo = false` y `eliminadoEn`.
+- **Reactivar** vuelve a marcar `activo = true` y guarda `reactivadoEn`.
+- El gate de sesión muestra la pantalla **Cuenta deshabilitada** mientras la
+  cuenta esté inactiva.
 - Las reglas de Firestore bloquean las operaciones de cuentas inactivas.
+- El superadministrador no puede deshabilitarse a sí mismo ni tocar otra cuenta
+  con rol `superadministrador`.
 
 Para eliminar definitivamente la cuenta de Authentication hay que hacerlo desde
 Firebase Console o con el Admin SDK.
 
-## Búsqueda de usuarios
+## Lista y búsqueda de usuarios
 
-El panel **Gestión de usuarios** incluye un buscador por correo. El filtro se
-aplica en memoria sobre la lista ya cargada (sin distinguir mayúsculas ni
-minúsculas), así que no genera consultas adicionales a Firestore.
+El panel **Gestión de usuarios** muestra **todas** las cuentas, activas y
+deshabilitadas, cada una con su rol y una etiqueta **Activo** o
+**Deshabilitado**. Incluye:
+
+- Buscador por correo (sin distinguir mayúsculas ni minúsculas).
+- Filtros **Todos**, **Activos** y **Deshabilitados** con el conteo de cuentas.
+- Acción **Deshabilitar** en las cuentas activas y **Reactivar** en las
+  deshabilitadas.
+
+El filtrado se aplica en memoria sobre la lista ya cargada, así que no genera
+consultas adicionales a Firestore.
 
 ## Asignación exclusiva de reportes (mantenimiento)
 
