@@ -38,6 +38,10 @@ class MesAnio implements Comparable<MesAnio> {
 
   DateTime get inicio => DateTime(anio, mes);
 
+  /// Inicio del mes siguiente (límite exclusivo para consultas por rango).
+  DateTime get siguienteInicio =>
+      mes == 12 ? DateTime(anio + 1) : DateTime(anio, mes + 1);
+
   bool get esActual => this == MesAnio.actual();
 
   /// `true` si [fecha] cae dentro de este mes y año.

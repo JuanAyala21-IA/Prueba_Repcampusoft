@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 
@@ -27,7 +27,11 @@ final mesNotificacionesSeleccionadoProvider =
 
 class MesNotificacionesController extends Notifier<MesAnio?> {
   @override
-  MesAnio? build() => null;
+  MesAnio? build() {
+    // Al cambiar de usuario o cerrar sesión, la bandeja vuelve al mes en curso.
+    ref.watch(sesionProvider.select((Sesion sesion) => sesion.uid));
+    return null;
+  }
 
   /// Selecciona [mes]. Elegir el mes en curso vuelve a `null` para que la
   /// bandeja siga automáticamente al calendario.
@@ -36,9 +40,14 @@ class MesNotificacionesController extends Notifier<MesAnio?> {
   void volverAlMesActual() => state = null;
 }
 
-/// Notificaciones del estudiante sin filtrar por mes (stream real).
-final notificacionesEstudianteTodasProvider =
-    StreamProvider.autoDispose<List<Notificacion>>((ref) {
+/// Notificaciones del estudiante de un mes concreto.
+///
+/// La consulta se limita en Firestore al rango del mes (`creadoEn`), por lo que
+/// no se descarga el historial completo. Es una familia por [MesAnio]: la
+/// bandeja y el badge comparten la misma suscripción cuando apuntan al mes en
+/// curso, evitando lecturas duplicadas.
+final notificacionesEstudianteMesProvider = StreamProvider.autoDispose
+    .family<List<Notificacion>, MesAnio>((ref, mes) {
       final sesion = ref.watch(sesionProvider);
       final repository = ref.watch(notificacionRepositoryProvider);
 
@@ -46,93 +55,74 @@ final notificacionesEstudianteTodasProvider =
         return const Stream<List<Notificacion>>.empty();
       }
 
-      return repository.watchNotificacionesEstudiante(sesion.uid!);
+      return repository.watchNotificacionesEstudiante(
+        sesion.uid!,
+        desde: mes.inicio,
+        hasta: mes.siguienteInicio,
+      );
     });
 
 /// Notificaciones del estudiante correspondientes al mes seleccionado.
 final notificacionesEstudianteProvider =
     Provider.autoDispose<AsyncValue<List<Notificacion>>>((ref) {
-      final AsyncValue<List<Notificacion>> todas = ref.watch(
-        notificacionesEstudianteTodasProvider,
-      );
       final MesAnio mes =
           ref.watch(mesNotificacionesSeleccionadoProvider) ?? MesAnio.actual();
-      return todas.whenData(
-        (notificaciones) => _filtrarPorMes(notificaciones, mes),
-      );
+      return ref.watch(notificacionesEstudianteMesProvider(mes));
     });
 
-/// Meses disponibles en la bandeja del estudiante (recientes primero).
-final mesesNotificacionesEstudianteProvider =
-    Provider.autoDispose<List<MesAnio>>((ref) {
-      final List<Notificacion> notificaciones =
-          ref.watch(notificacionesEstudianteTodasProvider).value ??
-          const <Notificacion>[];
-      return _mesesDisponibles(notificaciones);
-    });
+/// Meses consultables en el selector de la bandeja (recientes primero).
+///
+/// Es una ventana fija de 24 meses para no depender de leer todo el historial
+/// de notificaciones solo para construir el menú. Los meses sin movimientos
+/// muestran su estado vacío.
+final mesesNotificacionesProvider = Provider.autoDispose<List<MesAnio>>((ref) {
+  final MesAnio actual = MesAnio.actual();
+  final List<MesAnio> meses = <MesAnio>[actual];
+  for (int i = 1; i < 24; i++) {
+    meses.add(meses.last.anterior);
+  }
+  return meses;
+});
 
 /// Contador de no leídas del estudiante: solo cuenta el mes en curso para que
 /// la campana se restablezca al inicio de cada mes.
 final contadorNoLeidasEstudianteProvider =
     Provider.autoDispose<AsyncValue<int>>((ref) {
-      final AsyncValue<List<Notificacion>> todas = ref.watch(
-        notificacionesEstudianteTodasProvider,
-      );
-      final MesAnio mesActual = MesAnio.actual();
-      return todas.whenData(
-        (notificaciones) => _contarNoLeidas(notificaciones, mesActual),
-      );
+      return ref
+          .watch(notificacionesEstudianteMesProvider(MesAnio.actual()))
+          .whenData((notificaciones) => _contarNoLeidas(notificaciones));
     });
 
-/// Notificaciones del panel (sin filtrar por mes) según el rol actual.
+/// Notificaciones del panel de un mes concreto según el rol actual.
 ///
 /// - Encargado de mantenimiento y administrativo: solo notificaciones de
 ///   reportes de estudiantes (buzón `administrativo`).
 /// - Superadministrador: reportes de estudiantes + fallas de la app
 ///   (buzones `administrativo` y `superadministrador`), sin avisos
 ///   administrativos.
-final notificacionesAdminTodasProvider =
-    StreamProvider.autoDispose<List<Notificacion>>(
-      (ref) => _notificacionesPanelVisibles(ref),
-    );
+final notificacionesAdminMesProvider = StreamProvider.autoDispose
+    .family<List<Notificacion>, MesAnio>((ref, mes) {
+      return _notificacionesPanelVisibles(ref, mes);
+    });
 
 /// Notificaciones del panel correspondientes al mes seleccionado.
 final notificacionesAdminProvider =
     Provider.autoDispose<AsyncValue<List<Notificacion>>>((ref) {
-      final AsyncValue<List<Notificacion>> todas = ref.watch(
-        notificacionesAdminTodasProvider,
-      );
       final MesAnio mes =
           ref.watch(mesNotificacionesSeleccionadoProvider) ?? MesAnio.actual();
-      return todas.whenData(
-        (notificaciones) => _filtrarPorMes(notificaciones, mes),
-      );
+      return ref.watch(notificacionesAdminMesProvider(mes));
     });
-
-/// Meses disponibles en la bandeja del panel (recientes primero).
-final mesesNotificacionesAdminProvider = Provider.autoDispose<List<MesAnio>>((
-  ref,
-) {
-  final List<Notificacion> notificaciones =
-      ref.watch(notificacionesAdminTodasProvider).value ??
-      const <Notificacion>[];
-  return _mesesDisponibles(notificaciones);
-});
 
 /// Contador de no leídas del panel: solo cuenta el mes en curso.
 final contadorNoLeidasAdminProvider = Provider.autoDispose<AsyncValue<int>>((
   ref,
 ) {
-  final AsyncValue<List<Notificacion>> todas = ref.watch(
-    notificacionesAdminTodasProvider,
-  );
-  final MesAnio mesActual = MesAnio.actual();
-  return todas.whenData(
-    (notificaciones) => _contarNoLeidas(notificaciones, mesActual),
-  );
+  return ref
+      .watch(notificacionesAdminMesProvider(MesAnio.actual()))
+      .whenData((notificaciones) => _contarNoLeidas(notificaciones));
 });
 
-Stream<List<Notificacion>> _notificacionesPanelVisibles(Ref ref) {
+Stream<List<Notificacion>> _notificacionesPanelVisibles(Ref ref, MesAnio mes) {
   final sesion = ref.watch(sesionProvider);
   final repository = ref.watch(notificacionRepositoryProvider);
 
@@ -146,7 +136,12 @@ Stream<List<Notificacion>> _notificacionesPanelVisibles(Ref ref) {
       : const <String>['administrativo'];
 
   return repository
-      .watchNotificacionesAdmin(sesion.uid!, destinoRoles: destinoRoles)
+      .watchNotificacionesAdmin(
+        sesion.uid!,
+        destinoRoles: destinoRoles,
+        desde: mes.inicio,
+        hasta: mes.siguienteInicio,
+      )
       .map(
         (notifs) => notifs.where((notif) {
           if (esSuperadministrador) {
@@ -158,31 +153,8 @@ Stream<List<Notificacion>> _notificacionesPanelVisibles(Ref ref) {
       );
 }
 
-List<Notificacion> _filtrarPorMes(
-  List<Notificacion> notificaciones,
-  MesAnio mes,
-) {
-  return notificaciones
-      .where((notificacion) => mes.contiene(notificacion.creadoEn.toDate()))
-      .toList();
-}
-
-int _contarNoLeidas(List<Notificacion> notificaciones, MesAnio mes) {
-  return notificaciones
-      .where(
-        (notificacion) =>
-            !notificacion.leida && mes.contiene(notificacion.creadoEn.toDate()),
-      )
-      .length;
-}
-
-List<MesAnio> _mesesDisponibles(List<Notificacion> notificaciones) {
-  final Set<MesAnio> meses = <MesAnio>{
-    for (final Notificacion notificacion in notificaciones)
-      MesAnio.desde(notificacion.creadoEn.toDate()),
-    MesAnio.actual(),
-  };
-  return meses.toList()..sort((a, b) => b.compareTo(a));
+int _contarNoLeidas(List<Notificacion> notificaciones) {
+  return notificaciones.where((notificacion) => !notificacion.leida).length;
 }
 
 /// Inicializa los servicios de notificaciones una sola vez al arrancar la app.
@@ -192,7 +164,12 @@ List<MesAnio> _mesesDisponibles(List<Notificacion> notificaciones) {
 /// - [PushNotificationService]: registra el token FCM y navega al tocar una
 ///   notificación que llegó con la app en segundo plano o cerrada.
 final notificacionesBootstrapProvider = Provider<void>((ref) {
-  _inicializarNotificaciones(ref);
+  // Se difiere hasta después del primer frame: registrar FCM y el canal de
+  // notificaciones locales son llamadas de plataforma que no deben competir
+  // con el primer pintado de la app.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _inicializarNotificaciones(ref);
+  });
 });
 
 Future<void> _inicializarNotificaciones(Ref ref) async {

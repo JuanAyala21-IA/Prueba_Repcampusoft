@@ -37,6 +37,19 @@ class IndicadorAmpliarImagen extends StatelessWidget {
   }
 }
 
+/// Ancho de decodificación recomendado para una imagen en pantalla.
+///
+/// Decodificar la foto al tamaño visible (en píxeles físicos) evita reservar
+/// memoria para resoluciones que nunca se muestran. [factor] permite pedir más
+/// detalle cuando la imagen se puede ampliar con zoom.
+int anchoDecodificacionImagen(BuildContext context, {double factor = 1.0}) {
+  final double anchoFisico =
+      MediaQuery.sizeOf(context).width *
+      MediaQuery.devicePixelRatioOf(context) *
+      factor;
+  return anchoFisico.round();
+}
+
 class _ImagenAmpliada extends StatefulWidget {
   const _ImagenAmpliada({required this.bytes, this.descripcion});
 
@@ -94,6 +107,10 @@ class _ImagenAmpliadaState extends State<_ImagenAmpliada> {
                     child: Image.memory(
                       widget.bytes,
                       fit: BoxFit.contain,
+                      cacheWidth: anchoDecodificacionImagen(
+                        context,
+                        factor: 1.5,
+                      ),
                       gaplessPlayback: true,
                     ),
                   ),

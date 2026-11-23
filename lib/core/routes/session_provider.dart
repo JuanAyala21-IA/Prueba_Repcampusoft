@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/results.dart';
 import '../../features/auth/data/firebase_auth_messages.dart';
 import '../../features/auth/data/providers/auth_providers.dart';
+import '../../features/reportes/data/media_reporte_loader.dart';
 import '../../features/auth/domain/auth_repository.dart';
 import '../../features/auth/domain/auth_usuario.dart';
 import '../../features/auth/domain/registro_intentado.dart';
@@ -516,6 +517,9 @@ class SesionController extends Notifier<Sesion> {
 
   Future<void> cerrarSesion() async {
     ref.read(registroIntentadoProvider.notifier).limpiar();
+    // Evita que las fotos de evidencia ya decodificadas queden visibles para
+    // otra cuenta en el mismo dispositivo.
+    limpiarCacheMediaReporte();
     final AuthRepository repo = ref.read(authRepositoryProvider);
     try {
       await repo.cerrarSesion();

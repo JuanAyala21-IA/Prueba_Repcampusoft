@@ -217,5 +217,45 @@ void main() {
         await sub.cancel();
       },
     );
+
+    test(
+      'soporta más de 30 notificaciones (lectura de leídas por lotes)',
+      () async {
+        final List<Map<String, dynamic>> muchas =
+            List<Map<String, dynamic>>.generate(
+              35,
+              (int i) => <String, dynamic>{
+                'id': 'notif-masiva-$i',
+                'tipo': 'reporte',
+                'titulo': 'Notificación $i',
+                'mensaje': 'Mensaje $i',
+                'reportId': 'rep-${i % 3}',
+                'evento': 'creado',
+                'uidDestino': testUid,
+                'destinoRol': null,
+                'autorUid': 'admin-1',
+                'creadoEn': Timestamp.fromDate(
+                  DateTime.now().subtract(Duration(minutes: i)),
+                ),
+              },
+            );
+        await seedNotifications(
+          uid: testUid,
+          isAdmin: false,
+          customNotifications: muchas,
+        );
+        await markAsRead(testUid, 'notif-masiva-0');
+        await markAsRead(testUid, 'notif-masiva-34');
+
+        final stream = repo.watchNotificacionesEstudiante(testUid);
+        final notificaciones = await stream.first;
+
+        expect(notificaciones.length, 35);
+        expect(
+          notificaciones.where((n) => n.leida).map((n) => n.id).toSet(),
+          <String>{'notif-masiva-0', 'notif-masiva-34'},
+        );
+      },
+    );
   });
 }

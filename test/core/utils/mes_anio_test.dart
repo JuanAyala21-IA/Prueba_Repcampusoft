@@ -5,10 +5,7 @@ import 'package:repcampusoft/core/utils/mes_anio.dart';
 void main() {
   group('MesAnio', () {
     test('deriva mes y año de una fecha', () {
-      expect(
-        MesAnio.desde(DateTime(2026, 11, 23)),
-        const MesAnio(2026, 11),
-      );
+      expect(MesAnio.desde(DateTime(2026, 11, 23)), const MesAnio(2026, 11));
       expect(MesAnio.desde(DateTime(2026, 1, 1)), const MesAnio(2026, 1));
     });
 

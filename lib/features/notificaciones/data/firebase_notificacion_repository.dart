@@ -12,13 +12,19 @@ class FirebaseNotificacionRepository implements NotificacionRepository {
   final FirebaseFirestore _firestore;
 
   @override
-  Stream<List<Notificacion>> watchNotificacionesEstudiante(String uid) {
+  Stream<List<Notificacion>> watchNotificacionesEstudiante(
+    String uid, {
+    DateTime? desde,
+    DateTime? hasta,
+  }) {
+    Query<Map<String, dynamic>> query = _firestore
+        .collection('notifications')
+        .where('uidDestino', isEqualTo: uid)
+        .orderBy('creadoEn', descending: true);
+    query = _aplicarRangoFechas(query, desde: desde, hasta: hasta);
     return _combineNotificacionesWithLeidas(
       uid: uid,
-      notificationsQuery: _firestore
-          .collection('notifications')
-          .where('uidDestino', isEqualTo: uid)
-          .orderBy('creadoEn', descending: true),
+      notificationsQuery: query,
     );
   }
 
@@ -27,6 +33,8 @@ class FirebaseNotificacionRepository implements NotificacionRepository {
     String uid, {
     List<String> destinoRoles = const <String>['administrativo'],
     String? filtroTipo,
+    DateTime? desde,
+    DateTime? hasta,
   }) {
     Query<Map<String, dynamic>> query = _firestore.collection('notifications');
 
@@ -45,10 +53,32 @@ class FirebaseNotificacionRepository implements NotificacionRepository {
       query = query.where('tipo', isEqualTo: filtroTipo.toLowerCase());
     }
 
+    query = _aplicarRangoFechas(query, desde: desde, hasta: hasta);
+
     return _combineNotificacionesWithLeidas(
       uid: uid,
       notificationsQuery: query,
     );
+  }
+
+  /// Limita la consulta al mes pedido. El rango usa `hasta` como límite
+  /// exclusivo; Firestore resuelve con los índices `destinoRol/uidDestino +
+  /// creadoEn` ya declarados, de modo que no se descarga el historial completo.
+  Query<Map<String, dynamic>> _aplicarRangoFechas(
+    Query<Map<String, dynamic>> query, {
+    DateTime? desde,
+    DateTime? hasta,
+  }) {
+    if (desde != null) {
+      query = query.where(
+        'creadoEn',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(desde),
+      );
+    }
+    if (hasta != null) {
+      query = query.where('creadoEn', isLessThan: Timestamp.fromDate(hasta));
+    }
+    return query;
   }
 
   @override
@@ -81,6 +111,28 @@ class FirebaseNotificacionRepository implements NotificacionRepository {
     ).map((notifs) => notifs.where((n) => !n.leida).length);
   }
 
+  /// Firestore limita `whereIn` a 30 elementos. Se consultan las leídas en
+  /// lotes para que la bandeja funcione aunque el usuario acumule cientos de
+  /// notificaciones (caso típico del superadministrador).
+  static const int _maxIdsPorConsulta = 30;
+
+  Future<Set<String>> _leerLeidas(String uid, List<String> notifIds) async {
+    final Set<String> leidas = <String>{};
+    for (int i = 0; i < notifIds.length; i += _maxIdsPorConsulta) {
+      final int fin = i + _maxIdsPorConsulta < notifIds.length
+          ? i + _maxIdsPorConsulta
+          : notifIds.length;
+      final QuerySnapshot<Map<String, dynamic>> snap = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('notificacionesLeidas')
+          .where(FieldPath.documentId, whereIn: notifIds.sublist(i, fin))
+          .get();
+      leidas.addAll(snap.docs.map((d) => d.id));
+    }
+    return leidas;
+  }
+
   Stream<List<Notificacion>> _combineNotificacionesWithLeidas({
     required String uid,
     required Query<Map<String, dynamic>> notificationsQuery,
@@ -89,24 +141,22 @@ class FirebaseNotificacionRepository implements NotificacionRepository {
     late StreamSubscription<QuerySnapshot<Map<String, dynamic>>> notifsSub;
     late StreamSubscription<QuerySnapshot<Map<String, dynamic>>> leidasSub;
 
+    Future<List<Notificacion>> resolver(
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+    ) async {
+      if (docs.isEmpty) return <Notificacion>[];
+      final List<String> notifIds = docs.map((d) => d.id).toList();
+      final Set<String> leidasSet = await _leerLeidas(uid, notifIds);
+      return _mapToNotificaciones(docs, leidasSet);
+    }
+
     Future<void> recompute() async {
-      final notifsSnap = await notificationsQuery.get();
-      final notifIds = notifsSnap.docs.map((d) => d.id).toList();
-
-      if (notifIds.isEmpty) {
-        controller.add([]);
-        return;
+      try {
+        final notifsSnap = await notificationsQuery.get();
+        controller.add(await resolver(notifsSnap.docs));
+      } catch (error, stackTrace) {
+        controller.addError(error, stackTrace);
       }
-
-      final leidasSnap = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('notificacionesLeidas')
-          .where(FieldPath.documentId, whereIn: notifIds)
-          .get();
-
-      final leidasSet = leidasSnap.docs.map((d) => d.id).toSet();
-      controller.add(_mapToNotificaciones(notifsSnap.docs, leidasSet));
     }
 
     controller = StreamController<List<Notificacion>>.broadcast(
@@ -115,21 +165,18 @@ class FirebaseNotificacionRepository implements NotificacionRepository {
         recompute();
 
         // Listen to notifications changes
-        notifsSub = notificationsQuery.snapshots().listen((snap) async {
-          final notifIds = snap.docs.map((d) => d.id).toList();
-          if (notifIds.isEmpty) {
-            controller.add([]);
-            return;
-          }
-          final leidasSnap = await _firestore
-              .collection('users')
-              .doc(uid)
-              .collection('notificacionesLeidas')
-              .where(FieldPath.documentId, whereIn: notifIds)
-              .get();
-          final leidasSet = leidasSnap.docs.map((d) => d.id).toSet();
-          controller.add(_mapToNotificaciones(snap.docs, leidasSet));
-        });
+        notifsSub = notificationsQuery.snapshots().listen(
+          (snap) async {
+            try {
+              controller.add(await resolver(snap.docs));
+            } catch (error, stackTrace) {
+              controller.addError(error, stackTrace);
+            }
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            controller.addError(error, stackTrace);
+          },
+        );
 
         // Listen to leidas changes - when user marks as read
         leidasSub = _firestore
@@ -137,9 +184,14 @@ class FirebaseNotificacionRepository implements NotificacionRepository {
             .doc(uid)
             .collection('notificacionesLeidas')
             .snapshots()
-            .listen((_) async {
-              await recompute();
-            });
+            .listen(
+              (_) async {
+                await recompute();
+              },
+              onError: (Object error, StackTrace stackTrace) {
+                controller.addError(error, stackTrace);
+              },
+            );
       },
       onCancel: () {
         notifsSub.cancel();

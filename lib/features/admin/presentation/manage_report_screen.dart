@@ -347,6 +347,11 @@ class _GestionReporteState extends ConsumerState<_GestionReporte> {
     // El encargado de mantenimiento debe tomar el reporte antes de atenderlo;
     // una vez asignado, solo él puede cambiar su estado.
     final bool puedeTomar = esMantenimiento && reporte.sinAsignar && !esFinal;
+    // Se decodifica una sola vez por build y se reutiliza en la vista previa y
+    // al ampliar la imagen.
+    final Uint8List? evidenciaBytes = _evidenciaBase64 == null
+        ? null
+        : base64Decode(_evidenciaBase64!);
     final bool puedeGestionar =
         esAdministrativo || (esMantenimiento && asignadoAMi);
 
@@ -731,11 +736,11 @@ class _GestionReporteState extends ConsumerState<_GestionReporte> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                          ] else if (_evidenciaBase64 != null) ...[
+                          ] else if (evidenciaBytes != null) ...[
                             GestureDetector(
                               onTap: () => mostrarImagenAmpliada(
                                 context,
-                                base64Decode(_evidenciaBase64!),
+                                evidenciaBytes,
                                 descripcion: 'Evidencia de la solución',
                               ),
                               child: Stack(
@@ -743,10 +748,13 @@ class _GestionReporteState extends ConsumerState<_GestionReporte> {
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(16),
                                     child: Image.memory(
-                                      base64Decode(_evidenciaBase64!),
+                                      evidenciaBytes,
                                       height: 160,
                                       width: double.infinity,
                                       fit: BoxFit.cover,
+                                      cacheWidth: anchoDecodificacionImagen(
+                                        context,
+                                      ),
                                     ),
                                   ),
                                   const Positioned(
@@ -1000,16 +1008,14 @@ class _FotoEvidenciaState extends ConsumerState<_FotoEvidencia> {
             ),
             child: Stack(
               children: [
-                Container(
-                  height: 160,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: AppColors.divider),
-                    image: DecorationImage(
-                      image: MemoryImage(bytes),
-                      fit: BoxFit.cover,
-                    ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Image.memory(
+                    bytes,
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    cacheWidth: anchoDecodificacionImagen(context),
                   ),
                 ),
                 const Positioned(

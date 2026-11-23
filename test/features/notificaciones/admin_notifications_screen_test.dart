@@ -63,8 +63,8 @@ Widget createTestApp({
         ),
       ),
       if (notificationsStream != null)
-        notificacionesAdminTodasProvider.overrideWith(
-          (ref) => notificationsStream,
+        notificacionesAdminMesProvider.overrideWith(
+          (ref, mes) => notificationsStream,
         ),
     ],
     child: MaterialApp.router(routerConfig: createRouter(initialRoute)),

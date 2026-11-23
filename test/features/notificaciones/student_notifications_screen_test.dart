@@ -64,11 +64,16 @@ Widget createTestApp({
           ),
         ),
       ),
-      // Override StreamProvider directamente con Stream.value() para datos
-      // fijos; el filtro mensual (actual) lo hace `notificacionesEstudianteProvider`.
-      notificacionesEstudianteTodasProvider.overrideWith(
-        (ref) => notificationsStream ?? Stream.value(notifications),
-      ),
+      // Override de la familia por mes con datos fijos; reproduce el filtro de
+      // rango que hace el repositorio real.
+      notificacionesEstudianteMesProvider.overrideWith((ref, mes) {
+        if (notificationsStream != null) return notificationsStream;
+        return Stream.value(
+          notifications
+              .where((n) => mes.contiene(n.creadoEn.toDate()))
+              .toList(),
+        );
+      }),
     ],
     child: MaterialApp.router(routerConfig: createRouter(initialRoute)),
   );

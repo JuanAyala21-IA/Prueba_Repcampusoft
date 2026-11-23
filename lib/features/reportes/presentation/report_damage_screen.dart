@@ -720,6 +720,7 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
                     height: 200,
                     width: double.infinity,
                     fit: BoxFit.cover,
+                    cacheWidth: anchoDecodificacionImagen(context),
                   ),
                 ),
                 Positioned(

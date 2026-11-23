@@ -444,16 +444,14 @@ class _FotoEvidenciaState extends ConsumerState<_FotoEvidencia> {
             ),
             child: Stack(
               children: [
-                Container(
-                  height: 160,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: AppColors.divider),
-                    image: DecorationImage(
-                      image: MemoryImage(bytes),
-                      fit: BoxFit.cover,
-                    ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Image.memory(
+                    bytes,
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    cacheWidth: anchoDecodificacionImagen(context),
                   ),
                 ),
                 const Positioned(

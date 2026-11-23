@@ -23,8 +23,12 @@ class FakeNotificacionRepository implements NotificacionRepository {
   FakeFirebaseFirestore get firestore => _firestore;
 
   @override
-  Stream<List<Notificacion>> watchNotificacionesEstudiante(String uid) {
-    return _getOrCreateStream(uid, isAdmin: false);
+  Stream<List<Notificacion>> watchNotificacionesEstudiante(
+    String uid, {
+    DateTime? desde,
+    DateTime? hasta,
+  }) {
+    return _getOrCreateStream(uid, isAdmin: false, desde: desde, hasta: hasta);
   }
 
   @override
@@ -32,12 +36,16 @@ class FakeNotificacionRepository implements NotificacionRepository {
     String uid, {
     List<String> destinoRoles = const <String>['administrativo'],
     String? filtroTipo,
+    DateTime? desde,
+    DateTime? hasta,
   }) {
     return _getOrCreateStream(
       uid,
       isAdmin: true,
       destinoRoles: destinoRoles,
       filtroTipo: filtroTipo,
+      desde: desde,
+      hasta: hasta,
     );
   }
 
@@ -79,9 +87,11 @@ class FakeNotificacionRepository implements NotificacionRepository {
     required bool isAdmin,
     List<String> destinoRoles = const <String>['administrativo'],
     String? filtroTipo,
+    DateTime? desde,
+    DateTime? hasta,
   }) {
     final cacheKey =
-        '$uid-$isAdmin-${destinoRoles.join(',')}-${filtroTipo ?? ''}';
+        '$uid-$isAdmin-${destinoRoles.join(',')}-${filtroTipo ?? ''}-${desde?.millisecondsSinceEpoch ?? ''}-${hasta?.millisecondsSinceEpoch ?? ''}';
     return _streamCache.putIfAbsent(
       cacheKey,
       () => _createReactiveStream(
@@ -89,6 +99,8 @@ class FakeNotificacionRepository implements NotificacionRepository {
         isAdmin: isAdmin,
         destinoRoles: destinoRoles,
         filtroTipo: filtroTipo,
+        desde: desde,
+        hasta: hasta,
       ),
     );
   }
@@ -101,6 +113,8 @@ class FakeNotificacionRepository implements NotificacionRepository {
     required bool isAdmin,
     List<String> destinoRoles = const <String>['administrativo'],
     String? filtroTipo,
+    DateTime? desde,
+    DateTime? hasta,
   }) {
     late final StreamController<List<Notificacion>> controller;
     late StreamSubscription notifsSub;
@@ -125,29 +139,58 @@ class FakeNotificacionRepository implements NotificacionRepository {
           .where('uidDestino', isEqualTo: uid)
           .orderBy('creadoEn', descending: true);
     }
+    if (desde != null) {
+      notificacionesQuery = notificacionesQuery.where(
+        'creadoEn',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(desde),
+      );
+    }
+    if (hasta != null) {
+      notificacionesQuery = notificacionesQuery.where(
+        'creadoEn',
+        isLessThan: Timestamp.fromDate(hasta),
+      );
+    }
     final notificationsQuery = notificacionesQuery;
+
+    Future<Set<String>> leerLeidas(List<String> notifIds) async {
+      // Firestore limita `whereIn` a 30 valores: se consulta por lotes igual
+      // que la implementación real.
+      const int maxIds = 30;
+      final Set<String> leidas = <String>{};
+      for (int i = 0; i < notifIds.length; i += maxIds) {
+        final int fin = i + maxIds < notifIds.length
+            ? i + maxIds
+            : notifIds.length;
+        final leidasSnap = await _firestore
+            .collection('users')
+            .doc(uid)
+            .collection('notificacionesLeidas')
+            .where(FieldPath.documentId, whereIn: notifIds.sublist(i, fin))
+            .get();
+        leidas.addAll(leidasSnap.docs.map((d) => d.id));
+      }
+      return leidas;
+    }
 
     Future<void> recompute() async {
       if (controller.isClosed) return;
-      final notifsSnap = await notificationsQuery.get();
-      final notifIds = notifsSnap.docs.map((d) => d.id).toList();
+      try {
+        final notifsSnap = await notificationsQuery.get();
+        final notifIds = notifsSnap.docs.map((d) => d.id).toList();
 
-      if (notifIds.isEmpty) {
-        controller.add([]);
-        return;
+        if (notifIds.isEmpty) {
+          controller.add([]);
+          return;
+        }
+
+        final Set<String> leidasSet = await leerLeidas(notifIds);
+        controller.add(
+          _mapToNotificaciones(notifsSnap.docs, leidasSet, filtroTipo),
+        );
+      } catch (error, stackTrace) {
+        controller.addError(error, stackTrace);
       }
-
-      final leidasSnap = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('notificacionesLeidas')
-          .where(FieldPath.documentId, whereIn: notifIds)
-          .get();
-
-      final leidasSet = leidasSnap.docs.map((d) => d.id).toSet();
-      controller.add(
-        _mapToNotificaciones(notifsSnap.docs, leidasSet, filtroTipo),
-      );
     }
 
     controller = StreamController<List<Notificacion>>.broadcast(

@@ -50,7 +50,7 @@ class AdminNotificationsScreen extends ConsumerWidget {
                   ref.watch(mesNotificacionesSeleccionadoProvider) ??
                   MesAnio.actual();
               final List<MesAnio> meses = ref.watch(
-                mesesNotificacionesAdminProvider,
+                mesesNotificacionesProvider,
               );
 
               return Column(
@@ -200,17 +200,12 @@ class _ListaNotificaciones extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: List.generate(notificaciones.length * 2 - 1, (index) {
-          if (index.isOdd) {
-            return const SizedBox(height: 12);
-          }
-          final notificacion = notificaciones[index ~/ 2];
-          return _NotificacionItem(notificacion: notificacion);
-        }),
-      ),
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+      itemCount: notificaciones.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) =>
+          _NotificacionItem(notificacion: notificaciones[index]),
     );
   }
 }

@@ -17,6 +17,7 @@ void main() {
     setUp(() {
       firestore = FakeFirebaseFirestore();
       almacenamiento = FakeAlmacenamientoImagen();
+      limpiarCacheMediaReporte();
     });
 
     Future<void> sembrarMedia(Map<String, dynamic> data) {
@@ -108,6 +109,36 @@ void main() {
         ),
         throwsA(isA<StateError>()),
       );
+    });
+
+    test('reutiliza la caché en memoria al pedir la misma imagen', () async {
+      final String base64 = base64Encode(bytes);
+      await sembrarMedia(<String, dynamic>{'base64': base64});
+
+      final Uint8List? primera = await cargarMediaReporte(
+        reporteId: 'reporte-1',
+        mediaId: 'foto',
+        almacenamiento: almacenamiento,
+        firestore: firestore,
+      );
+      expect(primera, bytes);
+
+      // Si el documento desaparece, la segunda lectura debe resolverse desde la
+      // caché sin tocar Firestore.
+      await firestore
+          .collection('reports')
+          .doc('reporte-1')
+          .collection('media')
+          .doc('foto')
+          .delete();
+
+      final Uint8List? segunda = await cargarMediaReporte(
+        reporteId: 'reporte-1',
+        mediaId: 'foto',
+        almacenamiento: almacenamiento,
+        firestore: firestore,
+      );
+      expect(segunda, bytes);
     });
   });
 }
