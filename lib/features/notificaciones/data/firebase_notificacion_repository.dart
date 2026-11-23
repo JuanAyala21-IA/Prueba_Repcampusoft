@@ -46,7 +46,12 @@ class FirebaseNotificacionRepository implements NotificacionRepository {
           .where('destinoRol', isEqualTo: destinoRoles.first)
           .orderBy('creadoEn', descending: true);
     } else {
-      query = query.where('destinoRol', whereIn: destinoRoles);
+      // `orderBy` explícito también para varios buzones: así la consulta usa el
+      // índice `destinoRol + creadoEn (DESC)` ya desplegado. Sin él, Firestore
+      // exige un índice extra con `creadoEn` ascendente.
+      query = query
+          .where('destinoRol', whereIn: destinoRoles)
+          .orderBy('creadoEn', descending: true);
     }
 
     if (filtroTipo != null && filtroTipo != 'Todas') {

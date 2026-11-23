@@ -18,7 +18,10 @@
   rango del mes visible (`creadoEn >= inicio` y `creadoEn < inicio del mes
   siguiente`) usando los índices `destinoRol/uidDestino + creadoEn` ya
   declarados en `firestore.indexes.json`. Se evita descargar el historial
-  completo cada vez que se abre la pantalla.
+  completo cada vez que se abre la pantalla. El superadministrador consulta
+  varios buzones con `whereIn` y un `orderBy('creadoEn', descending: true)`
+  explícito para que la consulta use el mismo índice compuesto ya desplegado
+  (`destinoRol ASC, creadoEn DESC`) y no exija una variante ascendente.
 - **Familia de providers por mes.** `notificacionesEstudianteMesProvider` y
   `notificacionesAdminMesProvider` (`.family<MesAnio>`) comparten la misma
   suscripción entre la lista y el badge cuando ambos apuntan al mes en curso,

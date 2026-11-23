@@ -128,10 +128,9 @@ class FakeNotificacionRepository implements NotificacionRepository {
             .where('destinoRol', isEqualTo: destinoRoles.first)
             .orderBy('creadoEn', descending: true);
       } else {
-        notificacionesQuery = notificacionesQuery.where(
-          'destinoRol',
-          whereIn: destinoRoles,
-        );
+        notificacionesQuery = notificacionesQuery
+            .where('destinoRol', whereIn: destinoRoles)
+            .orderBy('creadoEn', descending: true);
       }
     } else {
       notificacionesQuery = _firestore
