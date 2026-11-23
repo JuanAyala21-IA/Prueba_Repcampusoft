@@ -11,6 +11,7 @@ class Usuario {
     this.dependencia,
     this.telefono,
     this.activo = true,
+    this.creadoEn,
   });
 
   final String uid;
@@ -20,6 +21,11 @@ class Usuario {
   final String? cargo;
   final String? dependencia;
   final String? telefono;
+
+  /// Fecha de creación del perfil en Firestore. Se usa, entre otras cosas,
+  /// para limitar el selector de meses de notificaciones a los meses en los
+  /// que la cuenta ya existía.
+  final DateTime? creadoEn;
 
   /// `false` cuando el superadministrador eliminó (desactivó) la cuenta.
   /// La cuenta de Firebase Auth se conserva para auditoría, pero el gate de
@@ -35,6 +41,7 @@ class Usuario {
     String? dependencia,
     String? telefono,
     bool? activo,
+    DateTime? creadoEn,
   }) => Usuario(
     uid: uid,
     nombre: nombre ?? this.nombre,
@@ -44,5 +51,6 @@ class Usuario {
     dependencia: dependencia ?? this.dependencia,
     telefono: telefono ?? this.telefono,
     activo: activo ?? this.activo,
+    creadoEn: creadoEn ?? this.creadoEn,
   );
 }

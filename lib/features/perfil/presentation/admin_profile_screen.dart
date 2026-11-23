@@ -60,36 +60,6 @@ class AdminProfileScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           ProfileCard(
-                            titulo: 'Dependencia / Área',
-                            iconoTitulo: Icons.apartment_outlined,
-                            hijos: [
-                              if (perfil != null &&
-                                  perfil.dependencia != null &&
-                                  perfil.dependencia!.isNotEmpty)
-                                ProfileRow(
-                                  icono: Icons.business_outlined,
-                                  etiqueta: 'Dependencia',
-                                  valor: perfil.dependencia!,
-                                ),
-                              if (perfil != null &&
-                                  perfil.cargo != null &&
-                                  perfil.cargo!.isNotEmpty)
-                                ProfileRow(
-                                  icono: Icons.badge_outlined,
-                                  etiqueta: 'Cargo',
-                                  valor: perfil.cargo!,
-                                ),
-                              if (perfil == null ||
-                                  (perfil.dependencia == null &&
-                                      perfil.cargo == null))
-                                const ProfileRow(
-                                  icono: Icons.info_outline,
-                                  etiqueta: 'Sin información registrada',
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          ProfileCard(
                             titulo: 'Datos del funcionario',
                             iconoTitulo: Icons.person_outline,
                             hijos: [

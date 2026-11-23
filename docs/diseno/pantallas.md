@@ -120,20 +120,17 @@ Documento de referencia técnica y de diseño UI/UX basado en los prototipos vis
 
 ### Pantalla 3: Registro de Usuario (Register)
 - **Archivo de diseño**: `3.png`
-- **Propósito**: Permitir la creación de una cuenta nueva especificando el correo institucional, contraseña y rol (Persona/Estudiante o Administrativo).
+- **Propósito**: Permitir la creación de una cuenta nueva con nombre, correo institucional y contraseña; el tipo de acceso (estudiante o administrativo) se elige al iniciar sesión.
 - **Elementos**:
   - **Encabezado**:
     - Botón circular de retroceso.
     - Logo oficial de las **UTS**.
     - Título: `REGISTRO` (Bold, mayúsculas).
   - **Tarjeta de formulario (Fondo blanco con bordes redondeados)**:
+    - Campo: "Nombre completo: ____________".
     - Campo: "Correo: ____________" (con línea inferior).
     - Campo: "Contraseña: ____________" (con línea inferior).
     - Campo: "Confirmar clave: ____________" (con línea inferior).
-    - Campo: "Cargo: ____________" (con línea inferior).
-    - Selector de Rol (Radio buttons / Círculos de selección):
-      - Opción 1: `Persona` (Estudiante / Usuario común).
-      - Opción 2: `Administrativo` (Personal administrativo / mantenimiento).
 - **Acciones y Navegación**:
   - *Tap en botón retroceso*: Regresa a **Iniciar Sesión** (`1.png`).
   - *Completar registro*: Crea la cuenta y navega al Dashboard correspondiente (`4.png` o `5.png`).
@@ -224,27 +221,22 @@ Documento de referencia técnica y de diseño UI/UX basado en los prototipos vis
 
 ### Pantalla 7: Perfil de Usuario - Administrativo
 - **Archivo de diseño**: `7.png`
-- **Propósito**: Consultar la información del funcionario, área a la que pertenece, cargo y ajustes de cuenta.
+- **Propósito**: Consultar la información del funcionario y los ajustes de cuenta.
 - **Elementos**:
   - **Encabezado**:
     - Botón circular de retroceso.
     - Logo oficial de las **UTS**.
     - Avatar circular de perfil.
     - Título: `PERFIL` (Bold).
-    - Subtítulo: `Área encargada`.
-  - **Tarjeta 1: Dependencia / Área**:
-    - Icono de edificio institucional (`Icons.apartment_outlined`).
-    - Título del área: "Área de Mantenimiento" (Bold).
-    - Subtítulo: "Encargado de infraestructura".
-  - **Tarjeta 2: Datos del Funcionario**:
+    - Subtítulo: rol del usuario (por ejemplo, `Administrativo`).
+  - **Tarjeta 1: Datos del Funcionario**:
     - Fila 1: Icono usuario + Etiqueta "Nombre" + Valor "Juan Pérez Gracía".
     - Fila 2: Icono sobre + Etiqueta "Correo Institucional" + Valor "juan.perez@uts.edu.co".
     - Fila 3: Icono teléfono + Etiqueta "Telefono" + Valor "+57 310 123 7892".
-    - Fila 4: Icono maletín (`Icons.work_outline`) + Etiqueta "Cargo" + Valor "Coordinador de Mantenimiento".
-  - **Tarjeta 3: Opciones de Cuenta**:
+  - **Tarjeta 2: Opciones de Cuenta**:
     - Icono de lápiz + "Editar informacion" + flecha derecha (`>`).
     - Icono de candado + "Cambiar contraseña" + flecha derecha (`>`).
-  - **Tarjeta 4: Botón Cerrar Sesión**:
+  - **Tarjeta 3: Botón Cerrar Sesión**:
     - Icono de salida + "Cerrar sesión" (negrita).
 - **Acciones y Navegación**:
   - *Tap en botón retroceso*: Regresa a **Inicio Administrativo** (`5.png`).

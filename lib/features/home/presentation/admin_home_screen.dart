@@ -39,11 +39,7 @@ class AdminHomeScreen extends ConsumerWidget {
                   perfilAsync.when(
                     data: (perfil) {
                       final nombre = perfil?.nombre ?? 'Usuario';
-                      final area =
-                          perfil?.dependencia ??
-                          (perfil?.cargo ??
-                              sesion.rol?.etiqueta ??
-                              'Área encargada');
+                      final area = sesion.rol?.etiqueta ?? 'Área encargada';
                       return Column(
                         children: [
                           const Row(

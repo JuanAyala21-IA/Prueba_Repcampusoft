@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 
 import '../../../../core/routes/session_provider.dart';
 import '../../../../core/utils/mes_anio.dart';
+import '../../../auth/domain/usuario.dart';
+import '../../../perfil/data/providers/perfil_providers.dart';
 import '../../domain/notificacion.dart';
 import '../../domain/notificacion_repository.dart';
 import '../firebase_notificacion_repository.dart';
@@ -72,13 +74,33 @@ final notificacionesEstudianteProvider =
 
 /// Meses consultables en el selector de la bandeja (recientes primero).
 ///
-/// Es una ventana fija de 24 meses para no depender de leer todo el historial
-/// de notificaciones solo para construir el menú. Los meses sin movimientos
-/// muestran su estado vacío.
+/// La lista empieza en el mes de creación del perfil y termina en el mes en
+/// curso: no se ofrecen meses anteriores al alta de la cuenta. Mientras el
+/// perfil carga (o si un documento antiguo no tuviera fecha) se mantiene una
+/// ventana de 24 meses como respaldo.
 final mesesNotificacionesProvider = Provider.autoDispose<List<MesAnio>>((ref) {
+  final AsyncValue<Usuario?> asyncPerfil = ref.watch(perfilUsuarioProvider);
   final MesAnio actual = MesAnio.actual();
+
+  MesAnio primerMes;
+  if (asyncPerfil.isLoading) {
+    // Mientras llega el perfil no se ofrecen meses pasados (evita parpadeos).
+    primerMes = actual;
+  } else {
+    final DateTime? creadoEn = asyncPerfil.value?.creadoEn;
+    if (creadoEn != null) {
+      primerMes = MesAnio.desde(creadoEn.toLocal());
+      if (primerMes.compareTo(actual) > 0) primerMes = actual;
+    } else {
+      primerMes = actual;
+      for (int i = 1; i < 24; i++) {
+        primerMes = primerMes.anterior;
+      }
+    }
+  }
+
   final List<MesAnio> meses = <MesAnio>[actual];
-  for (int i = 1; i < 24; i++) {
+  while (meses.last.compareTo(primerMes) > 0) {
     meses.add(meses.last.anterior);
   }
   return meses;

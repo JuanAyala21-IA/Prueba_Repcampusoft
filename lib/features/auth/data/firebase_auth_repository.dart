@@ -163,6 +163,7 @@ class FirebaseAuthRepository implements AuthRepository {
       dependencia: data['dependencia'] as String?,
       telefono: data['telefono'] as String?,
       activo: data['activo'] as bool? ?? true,
+      creadoEn: (data['creadoEn'] as Timestamp?)?.toDate(),
     );
   }
 

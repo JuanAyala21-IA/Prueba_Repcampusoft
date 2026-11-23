@@ -15,7 +15,7 @@ import '../../../shared/widgets/fields.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../data/providers/perfil_providers.dart';
 
-/// Editar Perfil - permite editar nombre, teléfono, cargo y dependencia.
+/// Editar Perfil - permite editar nombre y teléfono.
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
 
@@ -27,8 +27,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nombre = TextEditingController();
   final _telefono = TextEditingController();
-  final _cargo = TextEditingController();
-  final _dependencia = TextEditingController();
   bool _guardando = false;
 
   @override
@@ -46,8 +44,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     if (perfil != null && mounted) {
       _nombre.text = perfil.nombre;
       _telefono.text = perfil.telefono ?? '';
-      _cargo.text = perfil.cargo ?? '';
-      _dependencia.text = perfil.dependencia ?? '';
     }
   }
 
@@ -55,8 +51,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   void dispose() {
     _nombre.dispose();
     _telefono.dispose();
-    _cargo.dispose();
-    _dependencia.dispose();
     super.dispose();
   }
 
@@ -70,10 +64,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           telefono: _telefono.text.trim().isEmpty
               ? null
               : _telefono.text.trim(),
-          cargo: _cargo.text.trim().isEmpty ? null : _cargo.text.trim(),
-          dependencia: _dependencia.text.trim().isEmpty
-              ? null
-              : _dependencia.text.trim(),
         );
     if (!mounted) return;
     setState(() => _guardando = false);
@@ -154,13 +144,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           LabelledField(
                             etiqueta: 'Teléfono',
                             controlador: _telefono,
-                          ),
-                          const SizedBox(height: 16),
-                          LabelledField(etiqueta: 'Cargo', controlador: _cargo),
-                          const SizedBox(height: 16),
-                          LabelledField(
-                            etiqueta: 'Dependencia',
-                            controlador: _dependencia,
                           ),
                           const SizedBox(height: 24),
                           PrimaryButton(

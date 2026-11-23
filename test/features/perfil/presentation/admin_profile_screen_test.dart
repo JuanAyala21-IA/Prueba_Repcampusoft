@@ -103,6 +103,8 @@ void main() {
       // Debug: print widget tree
       // debugDumpWidgetTree(tester);
 
+      // Los datos de cargo/dependencia se retiraron del perfil: aunque el
+      // usuario tenga esos valores guardados, no deben mostrarse.
       expect(
         find.byWidgetPredicate(
           (widget) =>
@@ -110,9 +112,9 @@ void main() {
               widget.data != null &&
               widget.data!.contains('Coordinador'),
         ),
-        findsOneWidget,
+        findsNothing,
       );
-      expect(find.text('Dependencia / Área'), findsOneWidget);
+      expect(find.text('Dependencia / Área'), findsNothing);
       expect(find.text('Datos del funcionario'), findsOneWidget);
       expect(find.textContaining('juan.perez@uts.edu.co'), findsOneWidget);
       expect(find.textContaining('+57 310 123 7892'), findsOneWidget);

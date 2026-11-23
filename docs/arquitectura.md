@@ -81,8 +81,8 @@ users/{uid}
 ├── correo:        string          # "csblanco@uts.edu.co" (único, == auth.token.email)
 ├── rol:           string          # "persona" | "administrativo"  (inmutable tras la creación)
 ├── telefono:      string          # "+57 300 123 4567" (editable, RF-09)
-├── dependencia:   string (opcional)   # "Área de Mantenimiento" (solo administrativo, perfil 7.png)
-├── cargo:         string (opcional)   # "Coordinador de Mantenimiento" (solo administrativo)
+├── dependencia:   string (opcional)   # legado: ya no se edita ni se muestra en el perfil
+├── cargo:         string (opcional)   # legado: ya no se edita ni se muestra en el perfil
 ├── fcmToken:      string (opcional)   # Token FCM registrado al habilitar push (migración Blaze §9)
 ├── creadoEn:      timestamp
 └── actualizadoEn: timestamp
@@ -808,7 +808,7 @@ sequenceDiagram
   - Listener: `onSnapshot(where uidDestino == miuid)` para la persona y `onSnapshot(where destinoRol == 'administrativo')` para el admin → reanima el `StreamProvider` → `LocalNotificacionesService` muestra la alerta local (`flutter_local_notifications`).
   - Badge de no leídas = intersección entre notificaciones visibles y `notificacionesLeidas` (sin índices extra).
 - **Mes en curso y reestablecimiento mensual**: la bandeja muestra por defecto únicamente las notificaciones del **mes en curso**. El selector del calendario (`MonthSelector`, `lib/shared/widgets/month_selector.dart`, con la lista generada por `mesesNotificacionesProvider`) permite consultar los **meses anteriores**: nada se borra de `notifications`, conservándose el historial. Al iniciar un nuevo mes, `MesNotificacionesController` y las familias `notificacionesEstudianteMesProvider`/`notificacionesAdminMesProvider` vuelven a consultar el mes actual, y el badge de no leídas de estudiante y panel contabiliza **solo el mes actual** (`_contarNoLeidas`).
-- **Rendimiento (ver `docs/rendimiento.md`)**: las notificaciones se consultan por rango de mes en Firestore (`creadoEn`, índices ya declarados), las leídas se leen en lotes de 30 (`_leerLeidas`), la bandeja usa `ListView.separated`, el selector cubre los últimos 24 meses sin leer el historial, y las imágenes de evidencia usan caché en memoria + decodificación al tamaño de pantalla.
+- **Rendimiento (ver `docs/rendimiento.md`)**: las notificaciones se consultan por rango de mes en Firestore (`creadoEn`, índices ya declarados), las leídas se leen en lotes de 30 (`_leerLeidas`), la bandeja usa `ListView.separated`, el selector de meses empieza en el mes de creación del perfil, y las imágenes de evidencia usan caché en memoria + decodificación al tamaño de pantalla.
 - **Interfaz `NotificacionesService`** (dominio `notificaciones`): `mostrar(titulo, mensaje, reportId)`, `inicializar()`.
   - **`LocalNotificacionesService`** *(activa)*: `flutter_local_notifications`; sin dependencia de FCM.
   - **`FcmNotificacionesService`** *(futura, requiere Blaze)*: delega en Firebase Cloud Messaging; el disparo real ocurre por Cloud Function (`onCreate` de `notifications`), ver §9.

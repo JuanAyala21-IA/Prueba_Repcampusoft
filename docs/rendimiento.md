@@ -26,9 +26,11 @@
   `notificacionesAdminMesProvider` (`.family<MesAnio>`) comparten la misma
   suscripción entre la lista y el badge cuando ambos apuntan al mes en curso,
   evitando lecturas duplicadas.
-- **Selector de meses sin lectura extra.** El menú se construye con una ventana
-  fija de los últimos **24 meses**; antes era necesario descargar todo el
-  historial solo para saber qué meses tenían datos.
+- **Selector de meses desde el alta de la cuenta.** El menú se construye desde
+  el mes de creación del perfil (`users/{uid}.creadoEn`) hasta el mes actual, de
+  modo que no se ofrecen meses anteriores a la existencia de la cuenta. Si el
+  perfil aún está cargando se muestra solo el mes actual (sin parpadeos) y, para
+  documentos antiguos sin fecha, se conserva una ventana de 24 meses.
 - **Listas virtualizadas.** Las bandejas usan `ListView.separated` en lugar de
   `SingleChildScrollView` + `Column`, de modo que solo se construyen las
   tarjetas visibles.
