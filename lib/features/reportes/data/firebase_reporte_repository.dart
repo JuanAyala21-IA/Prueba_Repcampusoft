@@ -63,27 +63,27 @@ class FirebaseReporteRepository implements ReporteRepository {
     final String uid = user.uid;
     final String correoAutor = user.email ?? '';
 
-    final bool tieneFoto = borrador.fotoBase64 != null;
-    Uint8List? fotoBytes;
-    if (tieneFoto) {
-      fotoBytes = base64Decode(borrador.fotoBase64!);
-      if (fotoBytes.lengthInBytes > 704640) {
-        return const Failure('La foto es demasiado grande');
-      }
+    final String fotoBase64 = borrador.fotoBase64;
+    if (fotoBase64.isEmpty) {
+      return const Failure('La foto del daño es obligatoria.');
+    }
+
+    final bool tieneFoto = true;
+    final Uint8List fotoBytes = base64Decode(fotoBase64);
+    if (fotoBytes.lengthInBytes > 704640) {
+      return const Failure('La foto es demasiado grande');
     }
 
     // La imagen se sube a Storage ANTES del batch: Firestore solo guarda la
     // ruta y el tamaño (así el documento no consume el límite de 1 MB).
-    ImagenAlmacenada? fotoAlmacenada;
-    if (fotoBytes != null) {
-      try {
-        fotoAlmacenada = await _almacenamiento.subirFotoReporte(
-          reportId: reporteId,
-          bytes: fotoBytes,
-        );
-      } catch (e) {
-        return Failure('No se pudo subir la foto: $e');
-      }
+    final ImagenAlmacenada fotoAlmacenada;
+    try {
+      fotoAlmacenada = await _almacenamiento.subirFotoReporte(
+        reportId: reporteId,
+        bytes: fotoBytes,
+      );
+    } catch (e) {
+      return Failure('No se pudo subir la foto: $e');
     }
 
     final String ubicacionTexto = borrador.ubicacionTexto;
@@ -139,22 +139,18 @@ class FirebaseReporteRepository implements ReporteRepository {
       datosHistorial,
     );
     batch.set(notifDoc(notifId), datosNotif);
-    if (fotoAlmacenada != null) {
-      batch.set(mediaFotoDoc(reporteId), {
-        'storagePath': fotoAlmacenada.storagePath,
-        'downloadUrl': fotoAlmacenada.downloadUrl,
-        'tamanoBytes': fotoAlmacenada.tamanoBytes,
-        'mimeType': fotoAlmacenada.mimeType,
-        'creadoEn': FieldValue.serverTimestamp(),
-      });
-    }
+    batch.set(mediaFotoDoc(reporteId), {
+      'storagePath': fotoAlmacenada.storagePath,
+      'downloadUrl': fotoAlmacenada.downloadUrl,
+      'tamanoBytes': fotoAlmacenada.tamanoBytes,
+      'mimeType': fotoAlmacenada.mimeType,
+      'creadoEn': FieldValue.serverTimestamp(),
+    });
 
     try {
       await batch.commit();
     } on FirebaseException catch (e) {
-      if (fotoAlmacenada != null) {
-        await _almacenamiento.eliminar(fotoAlmacenada.storagePath);
-      }
+      await _almacenamiento.eliminar(fotoAlmacenada.storagePath);
       if (e.code == 'permission-denied' || e.code == 'aborted') {
         DocumentSnapshot<Map<String, dynamic>>? previo;
         try {

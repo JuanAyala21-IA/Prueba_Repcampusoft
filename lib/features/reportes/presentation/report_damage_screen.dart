@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/catalogo_edificios.dart';
 import '../../../core/constants/catalogo_espacios.dart';
@@ -16,14 +15,13 @@ import '../../../core/utils/results.dart';
 import '../../../shared/widgets/curved_green_background.dart';
 import '../../../shared/widgets/fields.dart';
 import '../../../shared/widgets/image_preview.dart';
-import '../../../shared/widgets/image_source_sheet.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/uts_header.dart';
-import '../data/comprimir_imagen.dart';
 import '../../catalogos/data/providers/catalogo_providers.dart';
 import '../../catalogos/domain/catalogos.dart';
 import '../../catalogos/presentation/catalogos_screen.dart';
 import '../../auth/domain/rol_enum.dart';
+import '../data/providers/foto_reporte_provider.dart';
 import '../domain/reporte.dart';
 import '../domain/reporte_repository.dart';
 
@@ -65,6 +63,9 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
   bool _procesandoFoto = false;
   bool _enviando = false;
   bool _sinConexion = false;
+
+  /// `true` cuando el usuario intentó enviar sin la foto obligatoria.
+  bool _faltaFoto = false;
 
   TipoEspacio? get _tipoEspacio => _sitio?.tipoBase;
   String? get _tipoEspecial => _sitio?.tipoEspecial;
@@ -312,36 +313,27 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
   }
 
   Future<void> _adjuntarFoto() async {
-    final ImageSource? fuente = await mostrarSelectorFuenteImagen(context);
-    if (fuente == null) return;
-    if (!mounted) return;
     setState(() => _procesandoFoto = true);
-    final XFile? archivo = await ImagePicker().pickImage(
-      source: fuente,
-      maxWidth: 1600,
-      maxHeight: 1600,
-      imageQuality: 90,
-    );
-    if (archivo == null) {
-      if (mounted) setState(() => _procesandoFoto = false);
-      return;
-    }
-    // Compresión equilibrada: máx. 1280 px y ~150�?"250 KB
-    // (ver data/comprimir_imagen.dart).
-    Uint8List comprimida;
+    Uint8List? comprimida;
     try {
-      comprimida = await comprimirImagenReporte(archivo);
+      comprimida = await ref.read(seleccionarFotoReporteProvider)(context);
     } catch (_) {
       if (!mounted) return;
       setState(() => _procesandoFoto = false);
-      _mostrarAviso('No se pudo comprimir la imagen.');
+      _mostrarAviso('No se pudo procesar la imagen.');
       return;
     }
     if (!mounted) return;
+    if (comprimida == null) {
+      setState(() => _procesandoFoto = false);
+      return;
+    }
+    final Uint8List bytes = comprimida;
     setState(() {
       _procesandoFoto = false;
-      _fotoPreviewBytes = comprimida;
-      _fotoBase64 = base64Encode(comprimida);
+      _faltaFoto = false;
+      _fotoPreviewBytes = bytes;
+      _fotoBase64 = base64Encode(bytes);
     });
   }
 
@@ -361,14 +353,25 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
       return;
     }
 
-    // RF-11/RNF-04: bloquea el envio con foto si no hay conexion (la foto
-    // exige conexion activa 6.2/8.1). Sin foto si se permite en modo local.
+    // La foto de evidencia es obligatoria en todos los reportes: sin ella no
+    // se envía nada.
+    final String? fotoBase64 = _fotoBase64;
+    if (fotoBase64 == null) {
+      setState(() => _faltaFoto = true);
+      _mostrarAviso('La foto del daño es obligatoria.');
+      return;
+    }
+
+    // RF-11/RNF-04: la foto exige conexión activa (§6.2/8.1), así que el
+    // reporte solo se envía con conexión.
     final bool conexion = await ref
         .read(sondaConectividadProvider)
         .hayConexion();
-    if (!conexion && _fotoBase64 != null) {
+    if (!conexion) {
       setState(() => _sinConexion = true);
-      _mostrarAviso('Sin conexión: quita la foto o conectate para reportar.');
+      _mostrarAviso(
+        'Sin conexión: necesitas internet para enviar el reporte con su foto.',
+      );
       return;
     }
 
@@ -386,7 +389,7 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
               referencia: _referenciaParaGuardar,
               tipoDano: _tipoDano!,
               descripcion: _descripcionCtrl.text.trim(),
-              fotoBase64: _fotoBase64,
+              fotoBase64: fotoBase64,
             ),
           );
 
@@ -492,8 +495,9 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Sin conexión: la foto de evidencia requiere '
-                              'conexión activa. Quita la foto o reintenta.',
+                              'Sin conexión: la foto del daño es obligatoria '
+                              'y necesita conexión activa. Conéctate y '
+                              'reintenta.',
                               style: AppTypography.textTheme.bodySmall,
                             ),
                           ),
@@ -771,14 +775,19 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.divider),
+          border: Border.all(
+            color: _faltaFoto ? AppColors.estadoPendiente : AppColors.divider,
+            width: _faltaFoto ? 2 : 1,
+          ),
         ),
         child: Column(
           children: [
             Icon(
               Icons.add_a_photo_outlined,
               size: 44,
-              color: AppColors.textSecondary,
+              color: _faltaFoto
+                  ? AppColors.estadoPendiente
+                  : AppColors.textSecondary,
             ),
             const SizedBox(height: 8),
             Text(
@@ -787,9 +796,12 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              '(opcional)',
+              'La foto del daño es obligatoria',
               style: AppTypography.textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondary,
+                color: _faltaFoto
+                    ? AppColors.estadoPendiente
+                    : AppColors.textSecondary,
+                fontWeight: _faltaFoto ? FontWeight.w700 : FontWeight.w600,
               ),
             ),
           ],

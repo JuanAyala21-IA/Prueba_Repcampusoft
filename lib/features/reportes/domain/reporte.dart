@@ -52,7 +52,7 @@ class BorradorReporte {
     this.referencia,
     required this.tipoDano,
     required this.descripcion,
-    this.fotoBase64,
+    required this.fotoBase64,
   });
 
   final TipoEspacio tipoUbicacion;
@@ -74,8 +74,8 @@ class BorradorReporte {
   final String tipoDano;
   final String descripcion;
 
-  /// Foto opcional Base64 comprimida (~500 KB, RNF-06, §8.1).
-  final String? fotoBase64;
+  /// Foto obligatoria en Base64 comprimida (~500 KB, RNF-06, §8.1).
+  final String fotoBase64;
 
   String get ubicacionTexto => construirUbicacionTexto(
     tipoUbicacion: tipoUbicacion,

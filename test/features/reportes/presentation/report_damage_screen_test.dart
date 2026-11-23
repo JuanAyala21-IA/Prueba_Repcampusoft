@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +10,7 @@ import 'package:repcampusoft/core/constants/catalogo_espacios.dart';
 import 'package:repcampusoft/core/routes/session_provider.dart';
 import 'package:repcampusoft/core/utils/results.dart';
 import 'package:repcampusoft/features/auth/domain/rol_enum.dart';
+import 'package:repcampusoft/features/reportes/data/providers/foto_reporte_provider.dart';
 import 'package:repcampusoft/features/reportes/domain/historial_entry.dart';
 import 'package:repcampusoft/features/reportes/domain/reporte.dart';
 import 'package:repcampusoft/features/reportes/domain/reporte_repository.dart';
@@ -14,6 +18,12 @@ import 'package:repcampusoft/features/reportes/domain/servicio_adjuntar_foto.dar
 import 'package:repcampusoft/features/reportes/presentation/report_damage_screen.dart';
 import 'package:repcampusoft/shared/widgets/fields.dart';
 import 'package:repcampusoft/shared/widgets/primary_button.dart';
+
+/// PNG 1x1 válido para que `Image.memory` pueda decodificar la vista previa.
+final Uint8List _fotoFake = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhf'
+  'DwAChwGA60e6kgAAAABJRU5ErkJggg==',
+);
 
 class FakeRepo implements ReporteRepository {
   final Result<String> Function(BorradorReporte)? onCrear;
@@ -81,12 +91,16 @@ class _SesionPersonaFake extends SesionController {
 Widget createTestWidget({
   required ReporteRepository repo,
   required SondaConectividad sonda,
+  bool conFoto = true,
 }) {
   return ProviderScope(
     overrides: [
       sesionProvider.overrideWith(_SesionPersonaFake.new),
       reporteRepositoryProvider.overrideWith((_) => repo),
       sondaConectividadProvider.overrideWith((_) => sonda),
+      seleccionarFotoReporteProvider.overrideWithValue(
+        (context) async => conFoto ? _fotoFake : null,
+      ),
     ],
     child: MaterialApp.router(
       routerConfig: GoRouter(
@@ -141,6 +155,14 @@ Future<void> _escribir(
   await tester.ensureVisible(campo);
   await tester.pumpAndSettle();
   await tester.enterText(campo, texto);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _adjuntarFoto(WidgetTester tester) async {
+  final tile = find.text('Toca para tomar una foto o elegir de la galería');
+  await tester.ensureVisible(tile);
+  await tester.pumpAndSettle();
+  await tester.tap(tile);
   await tester.pumpAndSettle();
 }
 
@@ -211,6 +233,7 @@ void main() {
       await _escribir(tester, 'Salón', '101');
       await _escribir(tester, 'Descripción', 'Grieta en pared');
       await _seleccionar(tester, 3, 'Silla dañada');
+      await _adjuntarFoto(tester);
       await _enviar(tester);
 
       expect(repo.calledWith.length, 1);
@@ -223,7 +246,7 @@ void main() {
       expect(borrador.referencia, isNull);
       expect(borrador.descripcion, 'Grieta en pared');
       expect(borrador.ubicacionTexto, 'Edificio A · Piso 1 · Salón 101');
-      expect(borrador.fotoBase64, isNull);
+      expect(borrador.fotoBase64, isNotNull);
 
       // Tras enviar, la app lleva directo a "Tus reportes" en lugar de dejar
       // al usuario en el formulario.
@@ -252,6 +275,7 @@ void main() {
       await _seleccionar(tester, 0 + 3, 'Mujer');
       await _seleccionar(tester, 0 + 4, 'Sanitario dañado');
       await _escribir(tester, 'Descripción', 'Sanitario tapado');
+      await _adjuntarFoto(tester);
       await _enviar(tester);
 
       expect(repo.calledWith.length, 1);
@@ -283,6 +307,7 @@ void main() {
         await _seleccionar(tester, 2, 'Banca dañada');
         await _escribir(tester, 'Referencia', 'Frente al Edificio B');
         await _escribir(tester, 'Descripción', 'Banca rota');
+        await _adjuntarFoto(tester);
         await _enviar(tester);
 
         expect(repo.calledWith.length, 1);
@@ -369,6 +394,7 @@ void main() {
       await _escribir(tester, 'Salón', '101');
       await _escribir(tester, 'Descripción', 'Test failure');
       await _seleccionar(tester, 3, 'Silla dañada');
+      await _adjuntarFoto(tester);
       await _enviar(tester);
 
       expect(repo.calledWith.length, 1);
@@ -378,7 +404,29 @@ void main() {
       expect(button.cargando, isFalse);
     });
 
-    testWidgets('10. Sin foto y sin conexión permite enviar', (tester) async {
+    testWidgets('10. Sin foto no envía aunque haya conexión', (tester) async {
+      final repo = FakeRepo();
+
+      await tester.pumpWidget(
+        createTestWidget(repo: repo, sonda: FakeSonda(), conFoto: false),
+      );
+      await tester.pumpAndSettle();
+
+      await _seleccionar(tester, 0, 'Aula / salón');
+      await _seleccionar(tester, 1, 'Edificio A');
+      await _seleccionar(tester, 2, 'Piso 1');
+      await _escribir(tester, 'Salón', '101');
+      await _escribir(tester, 'Descripción', 'Test sin foto');
+      await _seleccionar(tester, 3, 'Silla dañada');
+      await _enviar(tester);
+
+      expect(repo.calledWith, isEmpty);
+      expect(find.text('La foto del daño es obligatoria.'), findsOneWidget);
+    });
+
+    testWidgets('10b. Sin conexión bloquea el envío aunque haya foto', (
+      tester,
+    ) async {
       final repo = FakeRepo();
 
       await tester.pumpWidget(
@@ -395,9 +443,16 @@ void main() {
       await _escribir(tester, 'Salón', '101');
       await _escribir(tester, 'Descripción', 'Test sin conexión');
       await _seleccionar(tester, 3, 'Silla dañada');
+      await _adjuntarFoto(tester);
       await _enviar(tester);
 
-      expect(repo.calledWith.length, 1);
+      expect(repo.calledWith, isEmpty);
+      expect(
+        find.text(
+          'Sin conexión: necesitas internet para enviar el reporte con su foto.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('11. Baño solo ofrece Hombre y Mujer', (tester) async {
@@ -436,6 +491,7 @@ void main() {
         await _escribir(tester, 'Referencia (opcional)', 'Ala norte');
         await _escribir(tester, 'Descripción', 'Silla rota');
         await _seleccionar(tester, 1, 'Silla dañada');
+        await _adjuntarFoto(tester);
         await _enviar(tester);
 
         final borrador = repo.calledWith.first;
@@ -464,6 +520,7 @@ void main() {
       await _escribir(tester, 'Referencia (opcional)', 'Segundo piso');
       await _escribir(tester, 'Descripción', 'Mesa rota');
       await _seleccionar(tester, 1, 'Mesa dañada');
+      await _adjuntarFoto(tester);
       await _enviar(tester);
 
       final borrador = repo.calledWith.first;
@@ -504,6 +561,7 @@ void main() {
         await tester.pumpAndSettle();
         await _escribir(tester, 'Descripción', 'Mesa rota');
         await _seleccionar(tester, 2, 'Mesa dañada');
+        await _adjuntarFoto(tester);
         await _enviar(tester);
 
         final borrador = repo.calledWith.first;
@@ -530,6 +588,7 @@ void main() {
       await _seleccionar(tester, 1, 'Señalización');
       await _escribir(tester, 'Referencia (opcional)', 'Cerca de la entrada');
       await _escribir(tester, 'Descripción', 'Señal caída');
+      await _adjuntarFoto(tester);
       await _enviar(tester);
 
       final borrador = repo.calledWith.first;
@@ -571,6 +630,7 @@ void main() {
       await _escribir(tester, 'Sala de cómputo', 'Sala de cómputo 305');
       await _escribir(tester, 'Descripción', 'Equipo sin encender');
       await _seleccionar(tester, 3, 'Equipo de cómputo dañado');
+      await _adjuntarFoto(tester);
       await _enviar(tester);
 
       final borrador = repo.calledWith.first;

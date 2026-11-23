@@ -266,9 +266,13 @@ service cloud.firestore {
             || (request.resource.data.referencia is string
                 && request.resource.data.referencia.size() > 0
                 && request.resource.data.referencia != ""))
-        // T2/8.1 ATOMICO: si tieneFoto es true, media/foto debe existir en el after (existsAfter, mismo WriteBatch). Accesos: isPersona (user x2) + existsAfter x1 = 3 <= 10. Validaciones de texto son solo sobre request.resource.data (0 lecturas).
-        && (!request.resource.data.tieneFoto
-            || existsAfter(/databases/$(database)/documents/reports/$(reportId)/media/foto));
+        // T2/8.1 ATOMICO: la foto de evidencia es OBLIGATORIA en todo reporte
+        // nuevo. Exige tieneFoto == true y media/foto en el after (existsAfter,
+        // mismo WriteBatch). Accesos: isPersona (user x2) + existsAfter x1 = 3
+        // <= 10. Validaciones de texto son solo sobre request.resource.data (0
+        // lecturas).
+        && request.resource.data.tieneFoto == true
+        && existsAfter(/databases/$(database)/documents/reports/$(reportId)/media/foto);
 
       // Gestión por administrativo: puede supervisar y actualizar cualquier
       // reporte, esté o no asignado a un encargado de mantenimiento.

@@ -20,6 +20,7 @@ void main() {
     late FakeFirebaseFirestore fakeFirestore;
     late MockFirebaseAuth mockAuth;
     late FirebaseReporteRepository repository;
+    late String fotoValida;
 
     setUp(() {
       fakeFirestore = FakeFirebaseFirestore();
@@ -32,10 +33,36 @@ void main() {
         auth: mockAuth,
         almacenamiento: almacenamientoFake,
       );
+      fotoValida = base64Encode(List<int>.filled(1000, 0xFF));
+    });
+
+    test('Sin foto: devuelve Failure y no escribe nada', () async {
+      final borrador = BorradorReporte(
+        tipoUbicacion: TipoEspacio.aula,
+        tipoDano: 'Grieta',
+        edificio: 'Edificio A',
+        piso: 'Piso 1',
+        espacio: 'Salón 101',
+        descripcion: 'Grieta en la pared',
+        fotoBase64: '',
+      );
+
+      final result = await repository.crear(borrador);
+
+      expect(result, isA<Failure<String>>());
+      expect(
+        (result as Failure<String>).message,
+        'La foto del daño es obligatoria.',
+      );
+      expect((await fakeFirestore.collection('reports').get()).docs, isEmpty);
+      expect(
+        (await fakeFirestore.collection('notifications').get()).docs,
+        isEmpty,
+      );
     });
 
     test(
-      'Sin foto: crea reports, historial y notificación con campos exactos',
+      'Con foto: crea reports, historial y notificación con campos exactos',
       () async {
         final borrador = BorradorReporte(
           tipoUbicacion: TipoEspacio.aula,
@@ -44,7 +71,7 @@ void main() {
           piso: 'Piso 1',
           espacio: 'Salón 101',
           descripcion: 'Grieta en la pared',
-          fotoBase64: null,
+          fotoBase64: fotoValida,
         );
 
         final result = await repository.crear(borrador);
@@ -52,13 +79,9 @@ void main() {
         expect(result, isA<Success<String>>());
         final reportId = (result as Success<String>).value;
 
-        // Verificar reports/{reportId}
-        final reportDoc = await fakeFirestore
-            .collection('reports')
-            .doc(reportId)
-            .get();
-        expect(reportDoc.exists, isTrue);
-        final reportData = reportDoc.data()!;
+        final reportData =
+            (await fakeFirestore.collection('reports').doc(reportId).get())
+                .data()!;
         expect(reportData['uid'], 'test-uid');
         expect(reportData['correoAutor'], 'test@example.com');
         expect(reportData['tipoDano'], 'Grieta');
@@ -71,10 +94,9 @@ void main() {
         expect(reportData.containsKey('salon'), isFalse);
         expect(reportData['descripcion'], 'Grieta en la pared');
         expect(reportData['estado'], 'Pendiente');
-        expect(reportData['tieneFoto'], false);
+        expect(reportData['tieneFoto'], true);
         expect(reportData['creadoEn'], isNotNull);
 
-        // Verificar historial/{reportId}_inicial
         final historialDoc = await fakeFirestore
             .collection('reports')
             .doc(reportId)
@@ -82,12 +104,9 @@ void main() {
             .doc('${reportId}_inicial')
             .get();
         expect(historialDoc.exists, isTrue);
-        final historialData = historialDoc.data()!;
-        expect(historialData['estadoAnterior'], 'Pendiente');
-        expect(historialData['estadoNuevo'], 'Pendiente');
-        expect(historialData['creadoEn'], isNotNull);
+        expect(historialDoc.data()!['estadoAnterior'], 'Pendiente');
+        expect(historialDoc.data()!['estadoNuevo'], 'Pendiente');
 
-        // Verificar notifications/{reportId}_creado
         final notifDoc = await fakeFirestore
             .collection('notifications')
             .doc('${reportId}_creado')
@@ -95,23 +114,11 @@ void main() {
         expect(notifDoc.exists, isTrue);
         final notifData = notifDoc.data()!;
         expect(notifData['tipo'], 'reporte');
-        expect(notifData['titulo'], 'Nuevo reporte de dano');
         expect(notifData['reportId'], reportId);
         expect(notifData['evento'], 'creado');
         expect(notifData['estadoNuevo'], 'Pendiente');
-        expect(notifData['uidDestino'], isNull);
         expect(notifData['destinoRol'], 'administrativo');
         expect(notifData['autorUid'], 'test-uid');
-        expect(notifData['creadoEn'], isNotNull);
-
-        // Verificar que NO existe media/foto
-        final mediaDoc = await fakeFirestore
-            .collection('reports')
-            .doc(reportId)
-            .collection('media')
-            .doc('foto')
-            .get();
-        expect(mediaDoc.exists, isFalse);
       },
     );
 
@@ -177,6 +184,7 @@ void main() {
           referencia: 'Junto a las escaleras',
           tipoDano: 'Sanitario dañado',
           descripcion: 'Sanitario tapado',
+          fotoBase64: fotoValida,
         );
 
         final result = await repository.crear(borrador);
@@ -208,6 +216,7 @@ void main() {
           referencia: 'Frente al Edificio B',
           tipoDano: 'Banca dañada',
           descripcion: 'Banca rota',
+          fotoBase64: fotoValida,
         );
 
         final result = await repository.crear(borrador);

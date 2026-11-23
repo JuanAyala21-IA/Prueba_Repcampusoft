@@ -787,10 +787,11 @@ sequenceDiagram
 ### 8.1. DECIDIDO — Almacenamiento de Fotografías: **Base64 comprimido (~500 KB) en documento separado**
 
 - **Estado**: *activo* (se implementa así; no requiere plan Blaze).
+- La foto es **obligatoria en todos los reportes**: el formulario no permite enviar sin ella y las reglas de Firestore rechazan cualquier `reports` nuevo sin `tieneFoto: true` y su `media/foto` en el mismo batch.
 - La foto se captura (`image_picker`), se comprime en el cliente a **~500–600 KB** (`flutter_image_compress`) y se codifica en Base64.
 - Se guarda en **`reports/{id}/media/foto`** (documento separado). El reporte solo almacena **`tieneFoto: boolean`**; las consultas de lista (índices 1–4) no descargan la imagen, solo el detalle pide `media/foto` (RNF-02).
 
-- **T2 (atómica)**: la foto se escribe **EN EL MISMO `WriteBatch` que el reporte** (no post-batch): `batch.set(media/foto, {base64, tamanoBytes, mimeType, creadoEn})` junto con `reports/{reportId}`, `historial/_inicial` y `notifications/{reportId}_creado` en UN commit atómico (`§6.2`). El reporte guarda `tieneFoto: fotoBase64 != null`.
+- **T2 (atómica)**: la foto se escribe **EN EL MISMO `WriteBatch` que el reporte** (no post-batch): `batch.set(media/foto, {base64, tamanoBytes, mimeType, creadoEn})` junto con `reports/{reportId}`, `historial/_inicial` y `notifications/{reportId}_creado` en UN commit atómico (`§6.2`). El reporte guarda `tieneFoto: true`.
 - La regla `media/foto` usa **`getAfter(reportDoc(reportId))`** para validar el reporte DENTRO del batch (autor == auth.uid), no `get()` (que leería el estado pre-batch). Si la foto falla, falla TODO el batch: nunca queda un reporte sin foto cuando `tieneFoto:true` (RNF-06/§8.1).
 - Reintento idempotente (T2/§6.3): si el commit con foto devuelve `PERMISSION_DENIED`, se consulta `reports/{reportId}`; si existe con `uid == auth.uid`, el batch previo SI se completó (foto incluida) y se continúa como éxito sin duplicar (misma lógica atómica §6.2).
 - **Interfaz `FotoRepository`** (dominio `reportes`): `subir(foto, reportId)`, `obtener(reportId)`.

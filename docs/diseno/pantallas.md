@@ -267,13 +267,14 @@ Documento de referencia técnica y de diseño UI/UX basado en los prototipos vis
     - Campo: "Piso: ____________"
     - Campo: "Salón: ____________"
     - Campo: "Descripción: ____________" (área de texto multilínea).
-    - Sección: "Adjuntar evidencia:".
+    - Sección: "Adjuntar evidencia" (obligatoria): si no se adjunta una foto, el reporte no se envía.
     - Icono de carga en la nube con flecha hacia arriba (`Icons.cloud_upload_outlined`).
     - Botón principal: `ENVIAR REPORTE` (Fondo verde UTS, texto negro negrita).
 - **Acciones y Navegación**:
   - *Tap en botón retroceso*: Regresa a **Inicio Estudiante** (`4.png`).
   - *Tap en área de nube / "Adjuntar evidencia"*: Abre el selector de archivos / cámara / galería.
-  - *Tap en "ENVIAR REPORTE"*: Envía los datos del reporte a Firebase y redirige a **Tus Reportes** (`9.png` / `10.png`) o muestra confirmación.
+  - *Tap en "ENVIAR REPORTE" sin foto*: Muestra el aviso de que la foto es obligatoria y no envía.
+  - *Tap en "ENVIAR REPORTE" con foto y conexión*: Envía los datos del reporte a Firebase y redirige a **Tus Reportes** (`9.png` / `10.png`) o muestra confirmación.
 
 ---
 
