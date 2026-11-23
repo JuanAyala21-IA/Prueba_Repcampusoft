@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/app_router.dart';
 import '../../../core/routes/session_provider.dart';
+import '../../../core/utils/mes_anio.dart';
 import '../../../shared/widgets/bell_badge.dart';
 import '../../../shared/widgets/curved_green_background.dart';
+import '../../../shared/widgets/month_selector.dart';
 import '../../../shared/widgets/notification_card.dart';
 import '../../../shared/widgets/uts_header.dart';
 import '../domain/notificacion.dart';
@@ -17,6 +19,9 @@ import '../data/providers/notificacion_providers.dart';
 /// El filtrado por rol vive en `notificacionesAdminProvider`: mantenimiento y
 /// administrativo solo ven reportes de estudiantes; el superadministrador ve
 /// reportes de estudiantes y fallas de la app.
+///
+/// Además, cada mes se muestra únicamente el mes en curso; se pueden
+/// consultar los meses anteriores mediante el selector del calendario.
 class AdminNotificationsScreen extends ConsumerWidget {
   const AdminNotificationsScreen({super.key});
 
@@ -41,6 +46,12 @@ class AdminNotificationsScreen extends ConsumerWidget {
                 data: (value) => value,
                 orElse: () => 0,
               );
+              final MesAnio mesSeleccionado =
+                  ref.watch(mesNotificacionesSeleccionadoProvider) ??
+                  MesAnio.actual();
+              final List<MesAnio> meses = ref.watch(
+                mesesNotificacionesAdminProvider,
+              );
 
               return Column(
                 children: [
@@ -50,10 +61,19 @@ class AdminNotificationsScreen extends ConsumerWidget {
                     accion: BellBadge(conteo: conteoNoLeidas),
                   ),
                   const SizedBox(height: 8),
+                  MonthSelector(
+                    meses: meses,
+                    seleccionado: mesSeleccionado,
+                    onChanged: (mes) => ref
+                        .read(mesNotificacionesSeleccionadoProvider.notifier)
+                        .seleccionar(mes),
+                  ),
+                  const SizedBox(height: 12),
                   Expanded(
                     child: notificaciones.isEmpty
-                        ? _ListaVacia(
+                        ? _ListaVaca(
                             esSuperadministrador: sesion.esSuperadministrador,
+                            mes: mesSeleccionado,
                           )
                         : _ListaNotificaciones(notificaciones: notificaciones),
                   ),
@@ -123,13 +143,22 @@ class _ErrorCarga extends StatelessWidget {
   }
 }
 
-class _ListaVacia extends StatelessWidget {
-  const _ListaVacia({required this.esSuperadministrador});
+class _ListaVaca extends StatelessWidget {
+  const _ListaVaca({required this.esSuperadministrador, required this.mes});
 
   final bool esSuperadministrador;
+  final MesAnio mes;
 
   @override
   Widget build(BuildContext context) {
+    final bool esMesActual = mes.esActual;
+    final String mensaje = esSuperadministrador
+        ? esMesActual
+              ? 'Aquí verás los reportes de los estudiantes y las fallas de la app.'
+              : 'No hay fallas ni reportes de estudiantes registrados para este mes.'
+        : esMesActual
+        ? 'Aquí verás los reportes que hacen los estudiantes.'
+        : 'No hay reportes de estudiantes registrados para este mes.';
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -143,15 +172,15 @@ class _ListaVacia extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No hay notificaciones',
+              esMesActual
+                  ? 'No hay notificaciones'
+                  : 'No hay notificaciones en ${mes.etiqueta}',
               style: Theme.of(context).textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              esSuperadministrador
-                  ? 'Aquí verás los reportes de los estudiantes y las fallas de la app.'
-                  : 'Aquí verás los reportes que hacen los estudiantes.',
+              mensaje,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

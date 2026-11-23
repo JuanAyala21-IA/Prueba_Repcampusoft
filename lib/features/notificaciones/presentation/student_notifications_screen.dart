@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/app_router.dart';
 import '../../../core/routes/session_provider.dart';
+import '../../../core/utils/mes_anio.dart';
 import '../../../shared/widgets/bell_badge.dart';
 import '../../../shared/widgets/curved_green_background.dart';
+import '../../../shared/widgets/month_selector.dart';
 import '../../../shared/widgets/notification_card.dart';
 import '../../../shared/widgets/uts_header.dart';
 import '../domain/notificacion.dart';
@@ -36,6 +38,12 @@ class StudentNotificationsScreen extends ConsumerWidget {
                 data: (value) => value,
                 orElse: () => 0,
               );
+              final MesAnio mesSeleccionado =
+                  ref.watch(mesNotificacionesSeleccionadoProvider) ??
+                  MesAnio.actual();
+              final List<MesAnio> meses = ref.watch(
+                mesesNotificacionesEstudianteProvider,
+              );
 
               return Column(
                 children: [
@@ -45,9 +53,17 @@ class StudentNotificationsScreen extends ConsumerWidget {
                     accion: BellBadge(conteo: conteoNoLeidas),
                   ),
                   const SizedBox(height: 8),
+                  MonthSelector(
+                    meses: meses,
+                    seleccionado: mesSeleccionado,
+                    onChanged: (mes) => ref
+                        .read(mesNotificacionesSeleccionadoProvider.notifier)
+                        .seleccionar(mes),
+                  ),
+                  const SizedBox(height: 12),
                   Expanded(
                     child: notificaciones.isEmpty
-                        ? const _ListaVacia()
+                        ? _ListaVacia(mes: mesSeleccionado)
                         : _ListaNotificaciones(notificaciones: notificaciones),
                   ),
                 ],
@@ -117,10 +133,13 @@ class _ErrorCarga extends StatelessWidget {
 }
 
 class _ListaVacia extends StatelessWidget {
-  const _ListaVacia();
+  const _ListaVacia({required this.mes});
+
+  final MesAnio mes;
 
   @override
   Widget build(BuildContext context) {
+    final bool esMesActual = mes.esActual;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -134,13 +153,17 @@ class _ListaVacia extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No tienes notificaciones',
+              esMesActual
+                  ? 'No tienes notificaciones'
+                  : 'No tienes notificaciones en ${mes.etiqueta}',
               style: Theme.of(context).textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Cuando tengas actualizaciones en tus reportes,\naparecerán aquí.',
+              esMesActual
+                  ? 'Cuando tengas actualizaciones en tus reportes,\naparecerán aquí.'
+                  : 'Selecciona otro mes en el calendario para ver tus\nnotificaciones anteriores.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

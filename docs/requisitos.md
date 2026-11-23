@@ -154,10 +154,12 @@ El alcance del sistema abarca:
 - **quiero** recibir alertas dentro de la app y consultar una bandeja de notificaciones con historial persistente,
 - **para** enterarme de novedades sobre los reportes de infraestructura en tiempo real.
 - **Criterios de Aceptación**:
-  - **CA-07.1**: El contador en el icono de campana indica el número de notificaciones no leídas (intersección entre las notificaciones visibles y `users/{uid}/notificacionesLeidas`).
-  - **CA-07.2**: Al ingresar a la bandeja, las notificaciones se muestran con icono temático, título, mensaje y fecha, persistidas en Firestore e historial leída/no leída.
+  - **CA-07.1**: El contador en el icono de campana indica el número de notificaciones no leídas **del mes en curso** (intersección entre las notificaciones visibles del mes y `users/{uid}/notificacionesLeidas`).
+  - **CA-07.2**: Al ingresar a la bandeja, las notificaciones del mes en curso se muestran con icono temático, título, mensaje y fecha, persistidas en Firestore e historial leída/no leída.
   - **CA-07.3**: Al presionar una notificación, se marca como leída y navega al detalle del reporte relacionado.
   - **CA-07.4**: La alerta se muestra dentro de la app (notificación local) al detectar el documento nuevo; el push fuera de la app (FCM) se considera habilitado solo con plan Blaze (migración futura).
+  - **CA-07.5**: Al iniciar un nuevo mes, la bandeja se reestablece: la lista muestra solo el mes en curso, el badge de no leídas vuelve a 0 y se conservan todas las notificaciones para consultarlas desde meses anteriores.
+  - **CA-07.6**: El selector del calendario en la bandeja permite elegir un mes anterior y ver las notificaciones generadas en él; nada se borra ni modifica en Firestore.
 
 ---
 

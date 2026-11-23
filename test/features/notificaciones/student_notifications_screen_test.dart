@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:repcampusoft/core/routes/app_router.dart';
 import 'package:repcampusoft/core/routes/session_provider.dart';
+import 'package:repcampusoft/core/utils/mes_anio.dart';
 import 'package:repcampusoft/features/auth/data/providers/auth_providers.dart';
 import 'package:repcampusoft/features/auth/domain/rol_enum.dart';
 import 'package:repcampusoft/features/auth/domain/usuario.dart';
@@ -16,6 +17,7 @@ import 'package:repcampusoft/features/notificaciones/data/providers/notificacion
 import 'package:repcampusoft/features/notificaciones/data/local_notificaciones_service.dart';
 import 'package:repcampusoft/features/notificaciones/domain/notificacion.dart';
 import 'package:repcampusoft/features/notificaciones/presentation/student_notifications_screen.dart';
+import 'package:repcampusoft/shared/widgets/bell_badge.dart';
 import 'package:repcampusoft/shared/widgets/notification_card.dart';
 
 import '../../fakes/fake_auth_repository.dart';
@@ -62,8 +64,9 @@ Widget createTestApp({
           ),
         ),
       ),
-      // Override StreamProvider directly with synchronous Stream.value() like Phase 7
-      notificacionesEstudianteProvider.overrideWith(
+      // Override StreamProvider directamente con Stream.value() para datos
+      // fijos; el filtro mensual (actual) lo hace `notificacionesEstudianteProvider`.
+      notificacionesEstudianteTodasProvider.overrideWith(
         (ref) => notificationsStream ?? Stream.value(notifications),
       ),
     ],
@@ -222,5 +225,130 @@ void main() {
 
       expect(find.text('No tienes notificaciones'), findsOneWidget);
     });
+
+    Notificacion notifPrevioMes({required String id, required String titulo}) {
+      return Notificacion(
+        id: id,
+        tipo: NotificacionTipo.reporte,
+        titulo: titulo,
+        mensaje: 'Mensaje de $titulo',
+        reportId: 'rep-previo',
+        evento: NotificacionEvento.creado,
+        uidDestino: 'test-student-uid',
+        creadoEn: Timestamp.fromDate(
+          MesAnio.actual().anterior.inicio.add(const Duration(days: 14)),
+        ),
+        leida: false,
+      );
+    }
+
+    testWidgets(
+      'muestra el selector del mes y solo notificaciones del mes actual',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          createTestApp(fakeAuth: fakeAuth, notifications: testNotifications),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('${MesAnio.actual().etiqueta} (mes actual)'),
+          findsOneWidget,
+        );
+        expect(find.text('Reporte recibido'), findsOneWidget);
+        expect(find.text('Reporte Solucionado'), findsOneWidget);
+      },
+    );
+
+    testWidgets('no muestra notificaciones de meses anteriores por defecto', (
+      WidgetTester tester,
+    ) async {
+      final List<Notificacion> mesAnterior = [
+        notifPrevioMes(id: 'notif-old-1', titulo: 'Reporte del mes pasado'),
+        notifPrevioMes(id: 'notif-old-2', titulo: 'Otra del mes pasado'),
+      ];
+      await tester.pumpWidget(
+        createTestApp(fakeAuth: fakeAuth, notifications: mesAnterior),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotificationCard), findsNothing);
+      expect(find.text('No tienes notificaciones'), findsOneWidget);
+    });
+
+    testWidgets(
+      'muestra notificaciones de meses anteriores tras seleccionar el mes',
+      (WidgetTester tester) async {
+        final DateTime mesAnterior = MesAnio.actual().anterior.inicio;
+        final Notificacion old = Notificacion(
+          id: 'notif-mes-anterior',
+          tipo: NotificacionTipo.reporte,
+          titulo: 'Reporte mes pasado',
+          mensaje: 'Mensaje del mes pasado',
+          reportId: 'rep-previo',
+          evento: NotificacionEvento.creado,
+          uidDestino: 'test-student-uid',
+          creadoEn: Timestamp.fromDate(mesAnterior.toLocal()),
+          leida: false,
+        );
+        await tester.pumpWidget(
+          createTestApp(
+            fakeAuth: fakeAuth,
+            notifications: <Notificacion>[testNotifications.first, old],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Por defecto: el mes actual, con una tarjeta visible y el selector
+        // apuntando al mes actual.
+        expect(find.byType(NotificationCard), findsOneWidget);
+        expect(find.text('Reporte recibido'), findsOneWidget);
+        expect(find.text('Reporte mes pasado'), findsNothing);
+
+        // Abrir el selector y elegir el mes anterior.
+        final String etiquetaMesAnterior = MesAnio.desde(mesAnterior).etiqueta;
+        await tester.tap(find.byType(DropdownButton<MesAnio>));
+        await tester.pumpAndSettle();
+        expect(find.text(etiquetaMesAnterior), findsOneWidget);
+        await tester.tap(find.text(etiquetaMesAnterior));
+        await tester.pumpAndSettle();
+
+        // Ahora se ve la notificación del mes pasado y ya no la del actual.
+        expect(find.text('Reporte mes pasado'), findsOneWidget);
+        expect(find.text('Reporte recibido'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'el badge cuenta solo notificaciones no leídas del mes actual',
+      (WidgetTester tester) async {
+        final Notificacion notifActual1 = testNotifications.first;
+        final Notificacion notifActual2 = testNotifications[1];
+        final Notificacion notifPrevio1 = notifPrevioMes(
+          id: 'notif-old-unread-1',
+          titulo: 'Previo sin leer 1',
+        );
+        final Notificacion notifPrevio2 = notifPrevioMes(
+          id: 'notif-old-unread-2',
+          titulo: 'Previo sin leer 2',
+        );
+        await tester.pumpWidget(
+          createTestApp(
+            fakeAuth: fakeAuth,
+            notifications: [
+              notifActual1,
+              notifActual2,
+              notifPrevio1,
+              notifPrevio2,
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final BellBadge badge = tester.widget<BellBadge>(
+          find.byType(BellBadge),
+        );
+        expect(badge.conteo, 2);
+      },
+    );
   });
 }

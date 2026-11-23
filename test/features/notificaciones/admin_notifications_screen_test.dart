@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:repcampusoft/core/routes/app_router.dart';
 import 'package:repcampusoft/core/routes/session_provider.dart';
+import 'package:repcampusoft/core/utils/mes_anio.dart';
 import 'package:repcampusoft/features/auth/data/providers/auth_providers.dart';
 import 'package:repcampusoft/features/auth/domain/rol_enum.dart';
 import 'package:repcampusoft/features/auth/domain/usuario.dart';
@@ -62,7 +63,9 @@ Widget createTestApp({
         ),
       ),
       if (notificationsStream != null)
-        notificacionesAdminProvider.overrideWith((ref) => notificationsStream),
+        notificacionesAdminTodasProvider.overrideWith(
+          (ref) => notificationsStream,
+        ),
     ],
     child: MaterialApp.router(routerConfig: createRouter(initialRoute)),
   );
@@ -281,6 +284,45 @@ void main() {
         find.text('Aquí verás los reportes que hacen los estudiantes.'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('muestra meses anteriores tras seleccionar el mes', (
+      WidgetTester tester,
+    ) async {
+      final DateTime mesAnterior = MesAnio.actual().anterior.inicio;
+      await firestore.collection('notifications').doc('notif-mes-anterior').set(
+        {
+          'tipo': 'reporte',
+          'titulo': 'Reporte del mes pasado',
+          'mensaje': 'Mensaje del mes pasado',
+          'reportId': 'rep-old',
+          'evento': 'creado',
+          'uidDestino': null,
+          'destinoRol': 'administrativo',
+          'autorUid': 'autor-1',
+          'creadoEn': Timestamp.fromDate(mesAnterior),
+        },
+      );
+
+      await tester.pumpWidget(
+        createTestApp(fakeAuth: fakeAuth, repository: repository),
+      );
+      await tester.pumpAndSettle();
+
+      // Por defecto: solo el mes actual.
+      expect(find.text('Nuevo reporte de daño'), findsOneWidget);
+      expect(find.text('Reporte del mes pasado'), findsNothing);
+
+      // Seleccionar el mes anterior muestra su reporte.
+      final String etiquetaMesAnterior = MesAnio.desde(mesAnterior).etiqueta;
+      await tester.tap(find.byType(DropdownButton<MesAnio>));
+      await tester.pumpAndSettle();
+      expect(find.text(etiquetaMesAnterior), findsOneWidget);
+      await tester.tap(find.text(etiquetaMesAnterior));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reporte del mes pasado'), findsOneWidget);
+      expect(find.text('Nuevo reporte de daño'), findsNothing);
     });
   });
 }

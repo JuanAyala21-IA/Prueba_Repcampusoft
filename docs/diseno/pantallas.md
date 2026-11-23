@@ -327,6 +327,10 @@ Documento de referencia técnica y de diseño UI/UX basado en los prototipos vis
     - Logo oficial de las **UTS**.
     - Icono de campana con badge numérico circular verde: `3`.
     - Título: `Notificaciones` (Bold).
+  - **Selector de mes** (debajo del encabezado):
+    - Contenedor con icono de calendario y campo de texto mostrando el mes actual (ej. «Noviembre 2026 (mes actual)»).
+    - Desplegable con la lista de meses disponibles (mes en curso y meses anteriores con notificaciones), ordenados de más reciente a más antiguo.
+    - Tap en el selector despliega el menú; tap en un mes muestra las notificaciones de ese mes. La bandeja muestra por defecto el mes en curso.
   - **Listado de tarjetas de notificación (Fondo verde UTS con tarjetas blancas)**:
     - **Notificación 1 (Recibido)**:
       - Icono de documento (`Icons.description_outlined`).
@@ -408,6 +412,10 @@ Documento de referencia técnica y de diseño UI/UX basado en los prototipos vis
     - Icono de campana con badge numérico: `3`.
     - Título: `Notificaciones` (Bold).
     - Subtítulo: `Área Encargada`.
+  - **Selector de mes** (debajo del encabezado):
+    - Contenedor con icono de calendario y campo de texto mostrando el mes actual (ej. «Noviembre 2026 (mes actual)»).
+    - Desplegable con la lista de meses disponibles (mes en curso y meses anteriores con reportes de estudiantes), ordenados de más reciente a más antiguo.
+    - Tap en el selector despliega el menú; tap en un mes muestra los reportes del mes seleccionado. La bandeja muestra por defecto el mes en curso.
   - **Filtros temáticos (Chips horizontales)**:
     - Chip 1: `Todas` (Seleccionado, fondo verde UTS `#B8D400`).
     - Chip 2: `Reportes` (Gris suave).
@@ -440,6 +448,7 @@ Documento de referencia técnica y de diseño UI/UX basado en los prototipos vis
       - Flecha (`>`).
 - **Acciones y Navegación**:
   - *Tap en botón retroceso*: Regresa a **Inicio Administrativo** (`5.png`).
+  - *Tap en selector de mes*: muestra los reportes del mes seleccionado en el calendario (mes en curso por defecto).
   - *Filtrar por chip (Todas, Reportes, Administrativo, Sistema)*: Filtra el listado de notificaciones.
   - *Tap en una notificación de reporte*: Lleva a la gestión del daño en **Daños Reportados** (`12.png`).
 
