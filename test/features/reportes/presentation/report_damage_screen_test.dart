@@ -685,5 +685,43 @@ void main() {
       expect(find.text('Cancha deportiva'), findsNothing);
       expect(find.text('Plazoleta central'), findsNothing);
     });
+
+    testWidgets('19. Descripción y referencia no admiten números', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(repo: FakeRepo(), sonda: FakeSonda()),
+      );
+      await tester.pumpAndSettle();
+
+      await _seleccionar(tester, 0, 'Auditorio / sala');
+      await _escribir(tester, 'Nombre del auditorio', 'Auditorio principal');
+      await _escribir(tester, 'Referencia (opcional)', 'Ala3 norte');
+      await _escribir(tester, 'Descripción', 'Silla3 rota');
+
+      expect(find.text('Ala norte'), findsOneWidget);
+      expect(find.text('Silla rota'), findsOneWidget);
+      expect(find.text('Ala3 norte'), findsNothing);
+      expect(find.text('Silla3 rota'), findsNothing);
+    });
+
+    testWidgets('20. El espacio «Otro» es descriptivo y no admite números', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(repo: FakeRepo(), sonda: FakeSonda()),
+      );
+      await tester.pumpAndSettle();
+
+      await _seleccionar(tester, 0, 'Otro espacio');
+      await _escribir(
+        tester,
+        'Descripción de la ubicación',
+        'Pasillo3 técnico',
+      );
+
+      expect(find.text('Pasillo técnico'), findsOneWidget);
+      expect(find.text('Pasillo3 técnico'), findsNothing);
+    });
   });
 }

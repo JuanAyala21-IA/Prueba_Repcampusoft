@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -87,6 +88,7 @@ class LabelledField extends StatefulWidget {
     this.multiline = false,
     this.esContrasena = false,
     this.validator,
+    this.inputFormatters,
   });
 
   final String etiqueta;
@@ -98,6 +100,7 @@ class LabelledField extends StatefulWidget {
   final bool esContrasena;
 
   final String? Function(String?)? validator;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   State<LabelledField> createState() => _LabelledFieldState();
@@ -133,6 +136,7 @@ class _LabelledFieldState extends State<LabelledField> {
           obscureText: widget.esContrasena ? _oculto : false,
           style: AppTypography.textTheme.bodyMedium,
           validator: widget.validator,
+          inputFormatters: widget.inputFormatters,
           decoration: InputDecoration(
             filled: esCaja,
             fillColor: AppColors.surface,

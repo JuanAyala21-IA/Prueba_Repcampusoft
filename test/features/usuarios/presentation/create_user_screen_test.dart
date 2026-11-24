@@ -196,5 +196,49 @@ void main() {
       expect(find.text('El correo ya está registrado.'), findsOneWidget);
       expect(find.text('Cuenta creada'), findsNothing);
     });
+
+    testWidgets('el nombre no admite números', (tester) async {
+      final repo = FakeUsuarioRepository();
+      await abrirFormulario(tester, repo);
+
+      final campoNombre = find.descendant(
+        of: find.widgetWithText(LabelledField, 'Nombre completo'),
+        matching: find.byType(TextFormField),
+      );
+      await tester.enterText(campoNombre, 'Ana123');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ana'), findsOneWidget);
+      expect(find.text('Ana123'), findsNothing);
+    });
+
+    testWidgets('el teléfono solo admite 10 dígitos y valida el largo', (
+      tester,
+    ) async {
+      final repo = FakeUsuarioRepository();
+      await abrirFormulario(tester, repo);
+
+      final campoTelefono = find.descendant(
+        of: find.widgetWithText(LabelledField, 'Teléfono (opcional)'),
+        matching: find.byType(TextFormField),
+      );
+
+      // No permite letras ni pasar de 10 dígitos.
+      await tester.enterText(campoTelefono, '300123456789abc');
+      await tester.pumpAndSettle();
+      expect(find.text('3001234567'), findsOneWidget);
+
+      // Con 9 dígitos el formulario muestra el error y no crea la cuenta.
+      await tester.enterText(campoTelefono, '300123456');
+      await completarDatos(tester);
+      final boton = find.text('CREAR USUARIO');
+      await tester.ensureVisible(boton);
+      await tester.pumpAndSettle();
+      await tester.tap(boton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ingresa exactamente 10 números'), findsOneWidget);
+      expect(repo.creaciones, isEmpty);
+    });
   });
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/filtros_texto.dart';
 import '../../../core/utils/results.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/curved_green_background.dart';
@@ -136,7 +137,8 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
                         LabelledField(
                           etiqueta: 'Nombre completo',
                           controlador: _nombre,
-                          validator: Validators.requerido,
+                          validator: Validators.nombre,
+                          inputFormatters: FiltrosTexto.nombre,
                         ),
                         const SizedBox(height: 16),
                         LabelledField(
@@ -184,6 +186,8 @@ class _CreateUserScreenState extends ConsumerState<CreateUserScreen> {
                         LabelledField(
                           etiqueta: 'Teléfono (opcional)',
                           controlador: _telefono,
+                          inputFormatters: FiltrosTexto.telefono,
+                          validator: Validators.telefono,
                         ),
                         const SizedBox(height: 24),
                         PrimaryButton(

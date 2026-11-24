@@ -6,6 +6,7 @@ import '../../../core/routes/app_router.dart';
 import '../../../core/routes/session_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/filtros_texto.dart';
 import '../../../core/utils/results.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/curved_green_background.dart';
@@ -143,7 +144,8 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
                         LabelledField(
                           etiqueta: 'Nombre completo',
                           controlador: _nombre,
-                          validator: Validators.requerido,
+                          validator: Validators.nombre,
+                          inputFormatters: FiltrosTexto.nombre,
                         ),
                         if (sesion.autenticadoConGoogle) ...[
                           const SizedBox(height: 18),

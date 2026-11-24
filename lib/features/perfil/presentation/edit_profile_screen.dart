@@ -6,6 +6,8 @@ import '../../../core/routes/app_router.dart';
 import '../../../core/routes/session_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/filtros_texto.dart';
+import '../../../core/utils/validators.dart';
 import '../../../features/auth/data/providers/auth_providers.dart';
 import '../../../features/auth/domain/auth_repository.dart';
 import '../../../features/auth/domain/auth_usuario.dart';
@@ -136,14 +138,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           LabelledField(
                             etiqueta: 'Nombre',
                             controlador: _nombre,
-                            validator: (v) => v == null || v.trim().isEmpty
-                                ? 'Requerido'
-                                : null,
+                            validator: Validators.nombre,
+                            inputFormatters: FiltrosTexto.nombre,
                           ),
                           const SizedBox(height: 16),
                           LabelledField(
                             etiqueta: 'Teléfono',
                             controlador: _telefono,
+                            inputFormatters: FiltrosTexto.telefono,
+                            validator: Validators.telefono,
                           ),
                           const SizedBox(height: 24),
                           PrimaryButton(

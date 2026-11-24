@@ -7,6 +7,7 @@ import '../../../core/routes/app_router.dart';
 import '../../../core/routes/session_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/filtros_texto.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/circular_button_uts.dart';
 import '../../../shared/widgets/fields.dart';
@@ -141,7 +142,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           LabelledField(
                             etiqueta: 'Nombre completo',
                             controlador: _nombre,
-                            validator: Validators.requerido,
+                            validator: Validators.nombre,
+                            inputFormatters: FiltrosTexto.nombre,
                           ),
                           const SizedBox(height: 16),
                           LabelledField(

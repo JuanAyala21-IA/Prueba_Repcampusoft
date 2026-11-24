@@ -11,7 +11,9 @@ import '../../../core/routes/app_router.dart';
 import '../../../core/routes/session_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/filtros_texto.dart';
 import '../../../core/utils/results.dart';
+import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/curved_green_background.dart';
 import '../../../shared/widgets/fields.dart';
 import '../../../shared/widgets/image_preview.dart';
@@ -195,6 +197,12 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
         tipo == TipoEspacio.biblioteca ||
         tipo == TipoEspacio.otro;
   }
+
+  /// `true` cuando el campo de espacio es solo descriptivo (opción «Otro»),
+  /// por lo que no debe admitir números. Los salones y laboratorios sí los
+  /// necesitan para identificar el sitio.
+  bool get _espacioSoloTexto =>
+      _sitio?.esPersonalizado != true && _tipoEspacio == TipoEspacio.otro;
 
   String get _etiquetaEspacio {
     if (_sitio?.esPersonalizado == true) return 'Detalle del sitio';
@@ -611,7 +619,19 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
                               controlador: _espacioCtrl,
                               etiqueta: _etiquetaEspacio,
                               hint: _hintEspacio,
-                              validator: _obligatorio,
+                              // El campo «Otro / Descripción de la ubicación»
+                              // es descriptivo: sin números. Los campos que
+                              // identifican un salón/laboratorio (p. ej. «203»)
+                              // sí los necesitan.
+                              inputFormatters: _espacioSoloTexto
+                                  ? FiltrosTexto.textoReporte
+                                  : null,
+                              validator: (v) => _espacioSoloTexto
+                                  ? Validators.textoReporte(
+                                      v,
+                                      obligatorio: true,
+                                    )
+                                  : _obligatorio(v),
                             ),
                             const SizedBox(height: 18),
                           ],
@@ -633,9 +653,11 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
                                   ? 'Referencia'
                                   : 'Referencia (opcional)',
                               hint: _hintReferencia,
-                              validator: _referenciaObligatoria
-                                  ? _obligatorio
-                                  : null,
+                              inputFormatters: FiltrosTexto.textoReporte,
+                              validator: (v) => Validators.textoReporte(
+                                v,
+                                obligatorio: _referenciaObligatoria,
+                              ),
                             ),
                             const SizedBox(height: 18),
                           ],
@@ -656,7 +678,9 @@ class _ReportDamageScreenState extends ConsumerState<ReportDamageScreen> {
                     etiqueta: 'Descripción',
                     hint: 'Detalla el estado del daño',
                     multiline: true,
-                    validator: _obligatorio,
+                    inputFormatters: FiltrosTexto.textoReporte,
+                    validator: (v) =>
+                        Validators.textoReporte(v, obligatorio: true),
                   ),
                   const SizedBox(height: 18),
                   _buildAdjuntarFoto(context),
