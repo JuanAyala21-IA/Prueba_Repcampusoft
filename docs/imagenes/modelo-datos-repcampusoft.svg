@@ -1,0 +1,248 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1660" height="1010" viewBox="0 0 1660 1010" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <filter id="sombra" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.10"/>
+    </filter>
+    <marker id="flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#333333"/>
+    </marker>
+    <marker id="flechaGris" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/>
+    </marker>
+  </defs>
+
+  <rect width="1660" height="1010" fill="#FFFFFF"/>
+
+  <!-- ================= CONTENEDOR users ================= -->
+  <rect x="40" y="110" width="340" height="470" rx="22" fill="#F7FBFF" stroke="#4A7FB5" stroke-width="2.5" stroke-dasharray="9 6"/>
+  <text x="62" y="141" font-size="15" font-weight="700" fill="#1F4E79">Colección users</text>
+
+  <!-- users/{uid} -->
+  <g filter="url(#sombra)">
+    <rect x="60" y="155" width="300" height="300" rx="14" fill="#E3F0FC" stroke="#4A7FB5" stroke-width="2.5"/>
+  </g>
+  <text x="78" y="187" font-size="19" font-weight="800" fill="#111111">users/{uid}</text>
+  <line x1="78" y1="198" x2="342" y2="198" stroke="#4A7FB5" stroke-width="1" opacity="0.5"/>
+  <g font-size="13.5" fill="#111111">
+    <text x="78" y="222" font-family="Consolas, monospace" font-size="13">uid <tspan fill="#1F4E79" font-weight="700">(PK = auth.uid)</tspan></text>
+    <text x="78" y="244">nombre · correo <tspan fill="#1F4E79">(único)</tspan></text>
+    <text x="78" y="266">rol: <tspan font-size="12.5">persona | administrativo |</tspan></text>
+    <text x="96" y="286" font-size="12.5">mantenimiento | superadministrador</text>
+    <text x="78" y="308">telefono · cargo · dependencia</text>
+    <text x="78" y="330" font-family="Consolas, monospace" font-size="13">fcmToken</text>
+    <text x="78" y="352">activo : bool</text>
+    <text x="78" y="374">creadoEn · actualizadoEn</text>
+    <text x="78" y="396">eliminadoEn · reactivadoEn</text>
+    <text x="78" y="424" font-size="12" fill="#5A6B7B">Baja lógica: activo = false</text>
+    <text x="78" y="442" font-size="12" fill="#5A6B7B">(la cuenta de Auth se conserva)</text>
+  </g>
+
+  <!-- notificacionesLeidas -->
+  <g filter="url(#sombra)">
+    <rect x="60" y="475" width="300" height="85" rx="12" fill="#EAF2FA" stroke="#4A7FB5" stroke-width="2" stroke-dasharray="6 4"/>
+  </g>
+  <text x="76" y="499" font-size="14" font-weight="800" fill="#111111">notificacionesLeidas/{notifId}</text>
+  <g font-size="12.5" fill="#111111">
+    <text x="76" y="521">leida : bool (existencia = leída)</text>
+    <text x="76" y="541">leidaEn : timestamp</text>
+  </g>
+
+  <!-- super_admins_permitidos -->
+  <g filter="url(#sombra)">
+    <rect x="60" y="610" width="300" height="100" rx="12" fill="#F5EDE3" stroke="#8A6D3B" stroke-width="2" stroke-dasharray="6 4"/>
+  </g>
+  <text x="76" y="634" font-size="14" font-weight="800" fill="#111111">super_admins_permitidos</text>
+  <g font-size="12.5" fill="#111111">
+    <text x="76" y="656" font-family="Consolas, monospace" font-size="12.5">{correo} (ID en minúsculas)</text>
+    <text x="76" y="676">creadoEn · notas — solo consola</text>
+    <text x="76" y="696" font-size="11.5" fill="#5A6B7B">Bootstrap del superadministrador</text>
+  </g>
+
+  <!-- fallas_app -->
+  <g filter="url(#sombra)">
+    <rect x="60" y="760" width="300" height="170" rx="12" fill="#F2F3F5" stroke="#5A6B7B" stroke-width="2"/>
+  </g>
+  <text x="76" y="784" font-size="16" font-weight="800" fill="#111111">fallas_app/{fallaId}</text>
+  <line x1="76" y1="793" x2="344" y2="793" stroke="#5A6B7B" stroke-width="1" opacity="0.5"/>
+  <g font-size="12.5" fill="#111111">
+    <text x="76" y="815">uid <tspan fill="#1F4E79" font-weight="700">(FK → users)</tspan> · correo</text>
+    <text x="76" y="835">mensaje · pantalla</text>
+    <text x="76" y="855">plataforma · sistemaOperativo</text>
+    <text x="76" y="875">dispositivo · versionApp</text>
+    <text x="76" y="895">creadoEn</text>
+    <text x="76" y="917" font-size="11.5" fill="#5A6B7B">Buzón de una vía (sin estados)</text>
+  </g>
+
+  <!-- ================= CONTENEDOR reports ================= -->
+  <rect x="540" y="110" width="420" height="795" rx="22" fill="#FFFBF7" stroke="#E07A3F" stroke-width="2.5" stroke-dasharray="9 6"/>
+  <text x="562" y="141" font-size="15" font-weight="700" fill="#8A3D12">Colección reports</text>
+
+  <!-- reports/{reportId} -->
+  <g filter="url(#sombra)">
+    <rect x="560" y="155" width="380" height="375" rx="14" fill="#FDE6D2" stroke="#E07A3F" stroke-width="2.5"/>
+  </g>
+  <text x="578" y="187" font-size="19" font-weight="800" fill="#111111">reports/{reportId}</text>
+  <line x1="578" y1="198" x2="922" y2="198" stroke="#E07A3F" stroke-width="1" opacity="0.5"/>
+  <g font-size="13" fill="#111111">
+    <text x="578" y="220">uid <tspan fill="#8A3D12" font-weight="700">(FK → users)</tspan> · correoAutor</text>
+    <text x="578" y="241">tipoUbicacion · tipoUbicacionNombre</text>
+    <text x="578" y="262">edificio · piso · espacio · referencia</text>
+    <text x="578" y="283" font-family="Consolas, monospace" font-size="12.5">ubicacionTexto</text>
+    <text x="578" y="304">tipoDano · descripcion</text>
+    <text x="578" y="325">estado: Pendiente | En revision |</text>
+    <text x="596" y="344" font-size="12.5">En proceso | Solucionado</text>
+    <text x="578" y="365">tieneFoto : bool</text>
+    <text x="578" y="386">observacionAdmin</text>
+    <text x="578" y="407">asignadoA · asignadoNombre · asignadoEn</text>
+    <text x="578" y="428">encargadoUid · encargadoNombre</text>
+    <text x="578" y="449">tieneEvidenciaSolucion : bool</text>
+    <text x="578" y="470">creadoEn · actualizadoEn</text>
+    <text x="578" y="497" font-size="11.5" fill="#8A3D12">ID generado en el cliente (idempotencia)</text>
+    <text x="578" y="515" font-size="11.5" fill="#8A3D12">y batch atómico con historial + notificación</text>
+  </g>
+
+  <!-- historial -->
+  <g filter="url(#sombra)">
+    <rect x="560" y="550" width="380" height="145" rx="12" fill="#FDEBDD" stroke="#E07A3F" stroke-width="2" stroke-dasharray="6 4"/>
+  </g>
+  <text x="578" y="575" font-size="15" font-weight="800" fill="#111111">historial/{historialId}</text>
+  <g font-size="12.5" fill="#111111">
+    <text x="578" y="598">estadoAnterior → estadoNuevo</text>
+    <text x="578" y="618">observacion</text>
+    <text x="578" y="638">adminUid · adminNombre</text>
+    <text x="578" y="658">creadoEn (fecha del cambio)</text>
+    <text x="578" y="680" font-size="11.5" fill="#8A3D12">{reportId}_inicial | {reportId}_{estado}</text>
+  </g>
+
+  <!-- media -->
+  <g filter="url(#sombra)">
+    <rect x="560" y="715" width="380" height="170" rx="12" fill="#FDEBDD" stroke="#E07A3F" stroke-width="2" stroke-dasharray="6 4"/>
+  </g>
+  <text x="578" y="740" font-size="15" font-weight="800" fill="#111111">media/{mediaId}</text>
+  <g font-size="12.5" fill="#111111">
+    <text x="578" y="763">mediaId: <tspan font-family="Consolas, monospace">foto</tspan> | <tspan font-family="Consolas, monospace">solucion</tspan></text>
+    <text x="578" y="783" font-family="Consolas, monospace" font-size="12">storagePath</text>
+    <text x="578" y="803" font-family="Consolas, monospace" font-size="12">downloadUrl</text>
+    <text x="578" y="823">tamanoBytes · mimeType</text>
+    <text x="578" y="843">creadoEn</text>
+    <text x="578" y="866" font-size="11.5" fill="#8A3D12">La imagen vive en Firebase Storage (no en Firestore)</text>
+  </g>
+
+  <!-- ================= notifications ================= -->
+  <g filter="url(#sombra)">
+    <rect x="1120" y="155" width="460" height="300" rx="14" fill="#EFE7FB" stroke="#7A5AC0" stroke-width="2.5"/>
+  </g>
+  <text x="1138" y="187" font-size="19" font-weight="800" fill="#111111">notifications/{notifId}</text>
+  <line x1="1138" y1="198" x2="1562" y2="198" stroke="#7A5AC0" stroke-width="1" opacity="0.5"/>
+  <g font-size="13" fill="#111111">
+    <text x="1138" y="220">tipo: reporte | administrativo | sistema</text>
+    <text x="1138" y="242">titulo · mensaje</text>
+    <text x="1138" y="264">reportId <tspan fill="#4A2C80" font-weight="700">(FK → reports)</tspan></text>
+    <text x="1138" y="286">evento: creado | en_revision |</text>
+    <text x="1156" y="306" font-size="12.5">en_proceso | solucionado</text>
+    <text x="1138" y="328">estadoNuevo</text>
+    <text x="1138" y="350">uidDestino <tspan fill="#4A2C80" font-weight="700">(FK → users)</tspan>  XOR</text>
+    <text x="1138" y="372">destinoRol: administrativo | superadmin.</text>
+    <text x="1138" y="394">autorUid · fallaId</text>
+    <text x="1138" y="416" font-family="Consolas, monospace" font-size="12.5">creadoEn</text>
+    <text x="1138" y="440" font-size="11.5" fill="#4A2C80">Inmutable · ID = {reportId}_{evento}</text>
+  </g>
+
+  <!-- ================= CATÁLOGOS ================= -->
+  <g filter="url(#sombra)">
+    <rect x="1120" y="510" width="215" height="180" rx="12" fill="#E4F3E4" stroke="#4F9A5A" stroke-width="2"/>
+  </g>
+  <text x="1134" y="534" font-size="14" font-weight="800" fill="#111111">catalogos_edificios</text>
+  <g font-size="12.5" fill="#111111">
+    <text x="1134" y="558">nombre</text>
+    <text x="1134" y="578">pisos: [string]</text>
+    <text x="1134" y="598">activo · orden</text>
+    <text x="1134" y="618" font-family="Consolas, monospace" font-size="12">creadoEn · creadoPor</text>
+    <text x="1134" y="646" font-size="11" fill="#2F6B38">A, B, C, D, E, CA</text>
+    <text x="1134" y="664" font-size="11" fill="#2F6B38">Piso 1 … Piso 6</text>
+  </g>
+
+  <g filter="url(#sombra)">
+    <rect x="1355" y="510" width="215" height="180" rx="12" fill="#E4F3E4" stroke="#4F9A5A" stroke-width="2"/>
+  </g>
+  <text x="1369" y="534" font-size="14" font-weight="800" fill="#111111">catalogos_sitios</text>
+  <g font-size="12.5" fill="#111111">
+    <text x="1369" y="558">nombre · slug</text>
+    <text x="1369" y="578">requiereEdificio</text>
+    <text x="1369" y="598">requierePiso</text>
+    <text x="1369" y="618">muestraRef · refObligatoria</text>
+    <text x="1369" y="638">tipoEspecial</text>
+    <text x="1369" y="658">activo · orden</text>
+    <text x="1369" y="680" font-size="11" fill="#2F6B38">aula, laboratorio, baño, …</text>
+  </g>
+
+  <g filter="url(#sombra)">
+    <rect x="1120" y="705" width="215" height="180" rx="12" fill="#E4F3E4" stroke="#4F9A5A" stroke-width="2"/>
+  </g>
+  <text x="1134" y="729" font-size="14" font-weight="800" fill="#111111">catalogos_danos</text>
+  <g font-size="12.5" fill="#111111">
+    <text x="1134" y="753">nombre</text>
+    <text x="1134" y="773">sitios: [sitioId]</text>
+    <text x="1134" y="793">activo · orden</text>
+    <text x="1134" y="813" font-family="Consolas, monospace" font-size="12">actualizadoPor</text>
+    <text x="1134" y="841" font-size="11" fill="#2F6B38">[] = aplica a todos los sitios</text>
+    <text x="1134" y="862" font-size="11" fill="#2F6B38">N:M con catalogos_sitios</text>
+  </g>
+
+  <g filter="url(#sombra)">
+    <rect x="1355" y="705" width="215" height="180" rx="12" fill="#E4F3E4" stroke="#4F9A5A" stroke-width="2"/>
+  </g>
+  <text x="1369" y="729" font-size="14" font-weight="800" fill="#111111">catalogos_zonas</text>
+  <g font-size="12.5" fill="#111111">
+    <text x="1369" y="753">nombre</text>
+    <text x="1369" y="773">activo · orden</text>
+    <text x="1369" y="793" font-family="Consolas, monospace" font-size="12">actualizadoPor</text>
+    <text x="1369" y="821" font-size="11" fill="#2F6B38">Jardines, Sendero</text>
+    <text x="1369" y="839" font-size="11" fill="#2F6B38">peatonal, …</text>
+  </g>
+
+  <!-- Leyenda / Storage -->
+  <rect x="1120" y="905" width="460" height="80" rx="12" fill="#FAFAFA" stroke="#D1D5DB" stroke-width="1.5"/>
+  <g font-size="12" fill="#333333">
+    <line x1="1136" y1="928" x2="1176" y2="928" stroke="#333333" stroke-width="2" marker-end="url(#flecha)"/>
+    <text x="1184" y="932">referencia directa por ID</text>
+    <line x1="1136" y1="950" x2="1176" y2="950" stroke="#6B7280" stroke-width="2" stroke-dasharray="6 4"/>
+    <text x="1184" y="954">referencia lógica (slug / correo)</text>
+    <text x="1136" y="976" font-size="11.5" fill="#5A6B7B">Storage: reports/{uid}/{reportId}/foto.jpg · solucion.jpg</text>
+  </g>
+
+  <!-- ================= FLECHAS ================= -->
+
+  <!-- users -> reports -->
+  <path d="M360 320 L552 320" fill="none" stroke="#333333" stroke-width="2.4" marker-end="url(#flecha)"/>
+  <text x="378" y="310" font-size="13.5" font-weight="700" fill="#333333">1 : N</text>
+  <text x="378" y="340" font-size="12.5" fill="#333333">uid = auth.uid</text>
+
+  <!-- users -> notifications (dashed, por arriba) -->
+  <path d="M210 155 L210 80 L1300 80 L1300 147" fill="none" stroke="#6B7280" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#flechaGris)"/>
+  <text x="600" y="70" font-size="13" fill="#4B5563">1 : N · uidDestino  (o destinoRol para difusión por rol)</text>
+
+  <!-- reports -> notifications -->
+  <path d="M940 285 L1112 285" fill="none" stroke="#333333" stroke-width="2.4" marker-end="url(#flecha)"/>
+  <text x="952" y="275" font-size="13.5" font-weight="700" fill="#333333">1 : N</text>
+  <text x="952" y="305" font-size="12.5" fill="#333333">reportId</text>
+
+  <!-- reports -> historial -->
+  <path d="M750 530 L750 542" fill="none" stroke="#333333" stroke-width="2.4" marker-end="url(#flecha)"/>
+  <text x="760" y="545" font-size="12.5" fill="#333333">1 : N</text>
+
+  <!-- reports -> media -->
+  <path d="M940 495 L1060 495 L1060 800 L948 800" fill="none" stroke="#333333" stroke-width="2.4" marker-end="url(#flecha)"/>
+  <text x="968" y="620" font-size="13" font-weight="700" fill="#333333">1 : 2</text>
+  <text x="968" y="640" font-size="12" fill="#333333">foto / solucion</text>
+
+  <!-- catalogos -> reports (dashed) -->
+  <path d="M1120 600 L1000 600 L1000 505 L948 505" fill="none" stroke="#6B7280" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#flechaGris)"/>
+
+  <!-- super_admins -> users (dashed) -->
+  <path d="M210 610 L210 588" fill="none" stroke="#6B7280" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#flechaGris)"/>
+  <text x="222" y="605" font-size="11.5" fill="#4B5563">1 : 0..1 · correo</text>
+
+  <!-- users -> fallas_app (dashed) -->
+  <path d="M60 300 L24 300 L24 835 L52 835" fill="none" stroke="#6B7280" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#flechaGris)"/>
+</svg>
