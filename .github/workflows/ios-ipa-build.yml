@@ -1,0 +1,82 @@
+name: iOS-ipa-build
+
+# Se ejecuta a mano desde la pestaña Actions o al empujar una etiqueta
+# "ios-ipa-*". Las etiquetas, además del artefacto, dejan el IPA publicado
+# en una release descargable sin iniciar sesión.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'ios-ipa-*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-ios:
+    name: iOS Build (IPA sin firma)
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Flutter 3.47.3
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.3'
+          channel: stable
+          architecture: x64
+          cache: true
+
+      - name: Mostrar versión de Flutter
+        run: flutter --version
+
+      # SPM falla con las versiones actuales de Firebase (firebase_auth fija
+      # firebase-ios-sdk 12.19.0 y firebase_core/storage/messaging fijan
+      # 12.19.3). Con CocoaPods todos usan 12.19.3 y resuelven bien.
+      # Ademas flutter_local_notifications solo soporta CocoaPods.
+      - name: Usar CocoaPods en lugar de Swift Package Manager
+        run: flutter config --no-enable-swift-package-manager
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Compilar iOS sin firma
+        run: flutter build ios --release --no-codesign
+
+      - name: Empaquetar IPA sin firma
+        working-directory: build/ios/iphoneos
+        run: |
+          rm -rf Payload REPCAMPUSOFT-unsigned.ipa
+          mkdir -p Payload
+          mv Runner.app Payload/
+          zip -qq -r -9 REPCAMPUSOFT-unsigned.ipa Payload
+          shasum -a 256 REPCAMPUSOFT-unsigned.ipa > REPCAMPUSOFT-unsigned.ipa.sha256
+          ls -lh REPCAMPUSOFT-unsigned.ipa
+          cat REPCAMPUSOFT-unsigned.ipa.sha256
+
+      - name: Publicar IPA como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: REPCAMPUSOFT-ipa-sin-firma-${{ github.run_number }}
+          path: |
+            build/ios/iphoneos/REPCAMPUSOFT-unsigned.ipa
+            build/ios/iphoneos/REPCAMPUSOFT-unsigned.ipa.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publicar IPA en la release (solo etiquetas)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: REPCAMPUSOFT ${{ github.ref_name }}
+          prerelease: true
+          files: |
+            build/ios/iphoneos/REPCAMPUSOFT-unsigned.ipa
+            build/ios/iphoneos/REPCAMPUSOFT-unsigned.ipa.sha256
+          body: |
+            IPA **sin firma** generado por GitHub Actions con el código de la
+            etiqueta `${{ github.ref_name }}`.
+
+            No se instala directamente en un iPhone: requiere firma con un
+            certificado de Apple (Ad Hoc o desarrollo) o un Mac con Xcode.
