@@ -5,7 +5,9 @@
 > redactó con las pantallas, rutas y criterios reales del proyecto
 > (`lib/core/routes/app_router.dart`, `lib/features/**/presentation`,
 > `docs/diseno/pantallas.md` y `lib/core/theme/app_colors.dart`). El dato que el
-> proyecto no registra se marca como `[DATO FALTANTE]`.
+> proyecto no registra se marca como `[DATO FALTANTE]`. La herramienta de diseño
+> no está documentada en el repositorio: se deja como `[DATO FALTANTE]` hasta que
+> el autor confirme cuál se usó.
 
 ## Flujo de navegación e interfaces
 
@@ -83,8 +85,9 @@ interfaces y flujo de navegación por rol.
 ### 1. Diagramas de flujo
 
 Se propusieron dos diagramas de flujo independientes, uno por rol, con nodos
-rectangulares de esquinas redondeadas para las pantallas y rombos para las
-decisiones. Las flechas llevaron un rótulo con la acción que las originó.
+rectangulares de esquinas redondeadas para las pantallas y flechas rotuladas con
+la acción que las originó. Las figuras se generaron con los prototipos
+incorporados en la franja inferior de cada página.
 
 **Flujo del usuario (Figura 3a).**
 
@@ -127,8 +130,8 @@ para no saturarlo y se listaron en una nota al pie.
 
 ### 2. Capturas de los prototipos
 
-Se recomienda incluir las capturas en el orden del recorrido y con un rótulo
-debajo de cada una (`a)`, `b)`, `c)`…).
+Se incluyeron las capturas en el orden del recorrido y con un rótulo debajo de
+cada una (`a)`, `b)`, `c)`…).
 
 **Usuario:** `1.png` (Iniciar sesión), `3.png` (Registro), `4.png` (Inicio
 estudiante), `8.png` (Reportar daños), `10.png` (Lista de reportes), `9.png`
@@ -139,39 +142,63 @@ estudiante), `8.png` (Reportar daños), `10.png` (Lista de reportes), `9.png`
 prototipo en `docs/diseno/`: `[DATO FALTANTE: captura del prototipo de la
 pantalla Gestionar Reporte]`.
 
-Todas las imágenes existentes son de 1080 × 2280 píxeles. Para la figura se
-recortaron al marco del dispositivo, sin barras del sistema, y se conservó la
-misma escala en todas.
+Todas las imágenes existentes son de 414 × 896 píxeles. Se usaron tal como están
+en `docs/diseno/`, sin recortes ni retoques, y con la misma escala dentro de cada
+figura.
 
-### 3. Montaje en tamaño carta
+### 3. Montaje final en tamaño carta
 
-Se propuso una sola página vertical con dos bloques: **Figura 3a** (flujo y
-capturas del usuario) en la mitad superior y **Figura 3b** (flujo y capturas del
-Rol Admin) en la inferior. Si la legibilidad no se alcanzó, se dividió en
-**Figura 3a** y **Figura 3b**, cada una en su propia página.
+Las figuras se armaron en dos páginas carta verticales (21,59 × 27,94 cm), una por
+rol, con el flujo en la franja superior y los prototipos en la inferior. Los
+archivos generados son:
 
-- Página carta vertical (21,59 × 27,94 cm), márgenes de 2 cm; área útil de
-  17,6 × 23,9 cm.
-- Flujo en la franja superior del bloque: nodos de 3,2 a 3,8 cm de ancho por
-  1,2 cm de alto, en dos filas, con flechas de 1,5 pt.
-- Capturas en la franja inferior del bloque: cinco imágenes por fila como máximo,
-  de 3 cm de ancho y 6,3 cm de alto, con el rótulo en 8 pt.
-- Tipografía sans serif: 9 a 10 pt en los nodos, 11 a 12 pt en los títulos de
-  bloque y 8 pt en los rótulos de las capturas, medidas sobre el tamaño final
-  impreso.
-- Colores por rol: verde lima institucional para el flujo del usuario y gris
-  oscuro o azul para el del Rol Admin, con la misma paleta de estados del
-  sistema de diseño.
-- Leyenda al pie con los dos tipos de flecha (navegación directa y acceso por
-  rol) y una nota con las pantallas compartidas.
-- Exportación en PNG a 300 ppp o PDF vectorial. En Word se insertó con ajuste «En
-  línea con el texto», con el rótulo **Figura 3. Prototipos de las interfaces y
-  flujo de navegación por rol** y, debajo, **Fuente: Autores.**
-- Verificación final en blanco y negro: si los dos flujos se confunden, se
-  agregaron los títulos «Usuario» y «Rol Admin» y un fondo gris tenue alterno por
-  bloque.
+| Figura | PNG (300 ppp) | SVG editable | Tamaño |
+| :--- | :--- | :--- | :--- |
+| 3a. Flujo del usuario | `docs/imagenes/figura3a-flujo-usuario.png` | `docs/imagenes/figura3a-flujo-usuario.svg` | 2550 × 3300 px |
+| 3b. Flujo del Rol Admin | `docs/imagenes/figura3b-flujo-admin.png` | `docs/imagenes/figura3b-flujo-admin.svg` | 2550 × 3300 px |
 
-### 4. Versión editable en Mermaid
+Las plantillas `figura3a-flujo-usuario.plantilla.svg` y
+`figura3b-flujo-admin.plantilla.svg` conservan marcadores `__IMGn__` en lugar de
+las imágenes incrustadas; sirven para regenerar las figuras cuando se incorpore
+la captura de «Gestionar Reporte».
+
+- Área útil de 2078 px de ancho (márgenes de 2 cm = 236 px a 300 ppp).
+- Nodos de 3,6 × 0,9 cm en la Figura 3a y de 3,6 × 0,9 cm en la 3b; títulos de
+  9,1 pt y rótulos de 8,2 pt. Ningún texto quedó por debajo de 8 pt.
+- Prototipos de 2,8 × 6,0 cm en la Figura 3a y de 4,0 × 8,6 cm en la 3b,
+  conservados sin modificaciones.
+- Los SVG incluyen los prototipos incrustados en base64, de modo que el archivo
+  es autocontenido y se puede abrir sin las imágenes originales.
+- En Word se insertaron con ajuste «En línea con el texto», ancho de 16,5 cm, con
+  el rótulo **Figura 3. Prototipos de las interfaces y flujo de navegación por
+  rol** y, debajo, **Fuente: Autores.** Si el documento requiere una sola figura,
+  se usan 3a y 3b consecutivas y se rotulan «Figura 3a» y «Figura 3b».
+
+### 4. Captura pendiente: Gestionar Reporte
+
+La Figura 3b reserva el espacio de la captura en la tercera posición de la franja
+inferior (x = 1308 px, y = 1520 px, 470 × 1017 px) y lo marca como «CAPTURA
+PENDIENTE». El nodo 4 del flujo ya está dibujado y no depende de la imagen.
+
+Para incorporarla hay dos caminos:
+
+1. **Regenerar la figura (recomendado).** Guardar la captura en `docs/diseno/`
+   con el mismo formato de las demás (PNG de 414 × 896 o 1080 × 2280, marco
+   completo y sin barras del sistema) y volver a generar el SVG y el PNG. El
+   espacio, el borde y el rótulo ya están definidos; solo se sustituye la imagen.
+2. **Edición manual.** Abrir `figura3b-flujo-admin.svg` en Inkscape o Illustrator,
+   insertar la imagen en el rectángulo punteado, eliminar los textos del
+   marcador, cambiar el rótulo a «c) Gestionar reporte (N.png)» y borrar el
+   recuadro de nota «Captura pendiente». El SVG conserva los prototipos
+   incrustados, así que no hace falta rearmar el resto.
+
+Requisitos de la captura: pantalla completa de «Gestionar Reporte», sin recortes
+del marco del dispositivo, sin datos personales reales (usar un reporte de
+prueba) y con la misma relación de aspecto 414:896. Si la captura es de la app
+terminada, conviene rotularla como tal para no confundirla con los prototipos del
+Sprint 2.
+
+### 5. Versión editable en Mermaid
 
 ```mermaid
 flowchart TD

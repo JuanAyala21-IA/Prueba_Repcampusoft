@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="2550" height="3300" viewBox="0 0 2550 3300" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#333333"/>
+    </marker>
+    <marker id="flechaGris" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/>
+    </marker>
+    <style>
+      .nodo      { fill: #EDF2F7; stroke: #3F5D7A; stroke-width: 3; }
+      .nodoCond  { fill: #F9FAFB; stroke: #6B7280; stroke-width: 3; stroke-dasharray: 10 7; }
+      .titulo    { font-size: 38px; font-weight: 700; fill: #111111; text-anchor: middle; }
+      .tituloLargo { font-size: 34px; font-weight: 700; fill: #111111; text-anchor: middle; }
+      .rol       { font-size: 34px; font-weight: 400; fill: #4B5563; text-anchor: middle; }
+      .numero    { font-size: 34px; font-weight: 700; fill: #FFFFFF; text-anchor: middle; }
+      .rotulo    { font-size: 34px; fill: #333333; }
+      .rotuloHalo{ font-size: 34px; fill: #333333; paint-order: stroke; stroke: #FFFFFF; stroke-width: 8px; stroke-linejoin: round; }
+      .flecha    { fill: none; stroke: #333333; stroke-width: 3.5; }
+      .flechaPun { fill: none; stroke: #6B7280; stroke-width: 3.5; stroke-dasharray: 12 9; }
+      .badge     { fill: #3F5D7A; }
+      .badgeGris { fill: #6B7280; }
+      .seccion   { font-size: 42px; font-weight: 700; fill: #111111; }
+      .sub       { font-size: 34px; fill: #555555; }
+    </style>
+  </defs>
+
+  <rect width="2550" height="3300" fill="#FFFFFF"/>
+
+  <!-- ================= ENCABEZADO ================= -->
+  <rect x="236" y="96" width="10" height="62" fill="#3F5D7A"/>
+  <text x="270" y="150" font-size="58" font-weight="800" fill="#111111">Figura 3b. Flujo de navegación del Rol Admin</text>
+  <text x="270" y="205" class="sub">REPCAMPUSOFT · Sprint 2 · Prototipos de las interfaces (5.png, 12.png y 13.png)</text>
+  <line x1="236" y1="240" x2="2314" y2="240" stroke="#D1D5DB" stroke-width="2"/>
+
+  <!-- ================= FLUJO ================= -->
+  <text x="236" y="298" class="seccion">Flujo de navegación</text>
+
+  <!-- Nodo 1 -->
+  <rect x="236" y="330" width="430" height="110" rx="18" class="nodo"/>
+  <circle cx="270" cy="365" r="24" class="badge"/>
+  <text x="270" y="377" class="numero">1</text>
+  <text x="471" y="399" class="titulo">Iniciar sesión</text>
+
+  <!-- Nodo 2 -->
+  <rect x="880" y="330" width="430" height="110" rx="18" class="nodo"/>
+  <circle cx="914" cy="365" r="24" class="badge"/>
+  <text x="914" y="377" class="numero">2</text>
+  <text x="1115" y="399" class="tituloLargo">Inicio administrativo</text>
+
+  <!-- Nodo 3 -->
+  <rect x="1524" y="330" width="430" height="110" rx="18" class="nodo"/>
+  <circle cx="1558" cy="365" r="24" class="badge"/>
+  <text x="1558" y="377" class="numero">3</text>
+  <text x="1759" y="399" class="titulo">Daños reportados</text>
+
+  <!-- Nodo 6 -->
+  <rect x="880" y="500" width="430" height="110" rx="18" class="nodo"/>
+  <circle cx="914" cy="535" r="24" class="badge"/>
+  <text x="914" y="547" class="numero">6</text>
+  <text x="1115" y="569" class="titulo">Notificaciones</text>
+
+  <!-- Nodo 4 -->
+  <rect x="1524" y="500" width="430" height="110" rx="18" class="nodo"/>
+  <circle cx="1558" cy="535" r="24" class="badge"/>
+  <text x="1558" y="547" class="numero">4</text>
+  <text x="1759" y="569" class="titulo">Gestionar reporte</text>
+
+  <!-- Nodo 5 -->
+  <rect x="1524" y="670" width="430" height="110" rx="18" class="nodo"/>
+  <circle cx="1558" cy="705" r="24" class="badge"/>
+  <text x="1558" y="717" class="numero">5</text>
+  <text x="1759" y="739" class="titulo">Estado actualizado</text>
+
+  <!-- ===== Accesos condicionados por rol ===== -->
+  <!-- Nodo 7 -->
+  <rect x="236" y="900" width="430" height="230" rx="18" class="nodoCond"/>
+  <circle cx="270" cy="940" r="24" class="badgeGris"/>
+  <text x="270" y="952" class="numero">7</text>
+  <text x="471" y="946" class="titulo">Mis reportes</text>
+  <text x="471" y="988" class="titulo">asignados</text>
+  <text x="471" y="1068" class="rol">Solo mantenimiento</text>
+
+  <!-- Nodo 8 -->
+  <rect x="785" y="900" width="430" height="230" rx="18" class="nodoCond"/>
+  <circle cx="819" cy="940" r="24" class="badgeGris"/>
+  <text x="819" y="952" class="numero">8</text>
+  <text x="1020" y="958" class="tituloLargo">Gestión de usuarios</text>
+  <text x="1020" y="1068" class="rol">Solo superadministrador</text>
+
+  <!-- Nodo 9 -->
+  <rect x="1334" y="900" width="430" height="230" rx="18" class="nodoCond"/>
+  <circle cx="1368" cy="940" r="24" class="badgeGris"/>
+  <text x="1368" y="952" class="numero">9</text>
+  <text x="1569" y="946" class="titulo">Catálogos de</text>
+  <text x="1569" y="988" class="titulo">reportes</text>
+  <text x="1569" y="1056" class="rol">Mantenimiento y</text>
+  <text x="1569" y="1096" class="rol">superadministrador</text>
+
+  <!-- Nodo 10 -->
+  <rect x="1883" y="900" width="430" height="230" rx="18" class="nodoCond"/>
+  <circle cx="1917" cy="940" r="24" class="badgeGris"/>
+  <text x="1917" y="952" class="numero">10</text>
+  <text x="2118" y="946" class="titulo">Fallas y</text>
+  <text x="2118" y="988" class="titulo">exportación</text>
+  <text x="2118" y="1068" class="rol">Solo superadministrador</text>
+
+  <!-- ================= FLECHAS ================= -->
+  <!-- 1 -> 2 -->
+  <path d="M666 385 H872" class="flecha" marker-end="url(#flecha)"/>
+  <text x="773" y="310" class="rotulo" text-anchor="middle">Iniciar sesión</text>
+
+  <!-- 2 -> 3 -->
+  <path d="M1310 385 H1516" class="flecha" marker-end="url(#flecha)"/>
+  <text x="1413" y="310" class="rotulo" text-anchor="middle">Daño y gestión</text>
+
+  <!-- 3 -> 4 -->
+  <path d="M1739 440 V492" class="flecha" marker-end="url(#flecha)"/>
+  <text x="1756" y="482" class="rotulo">Seleccionar reporte</text>
+
+  <!-- 4 -> 5 -->
+  <path d="M1739 610 V662" class="flecha" marker-end="url(#flecha)"/>
+  <text x="1756" y="652" class="rotulo">Guardar cambios</text>
+
+  <!-- 2 -> 6 -->
+  <path d="M1095 440 V492" class="flecha" marker-end="url(#flecha)"/>
+  <text x="1078" y="482" class="rotulo" text-anchor="end">Notificaciones</text>
+
+  <!-- 6 -> 4 -->
+  <path d="M1310 555 H1516" class="flecha" marker-end="url(#flecha)"/>
+  <text x="1413" y="480" class="rotulo" text-anchor="middle">Seleccionar aviso</text>
+
+  <!-- 5 -> 3 (retorno) -->
+  <path d="M1524 725 H1450 V385 H1516" class="flechaPun" marker-end="url(#flechaGris)"/>
+  <text x="1425" y="600" class="rotulo" text-anchor="middle" transform="rotate(-90 1425 600)">Aceptar</text>
+
+  <!-- Bus 2 -> nodos 7 a 10 -->
+  <path d="M880 420 H820 V850 H451 V894" class="flechaPun" marker-end="url(#flechaGris)"/>
+  <path d="M880 420 H820 V850 H1000 V894" class="flechaPun" marker-end="url(#flechaGris)"/>
+  <path d="M880 420 H820 V850 H1549 V894" class="flechaPun" marker-end="url(#flechaGris)"/>
+  <path d="M880 420 H820 V850 H2098 V894" class="flechaPun" marker-end="url(#flechaGris)"/>
+  <text x="560" y="836" class="rotuloHalo">Accesos según el rol</text>
+
+  <!-- ================= LEYENDA ================= -->
+  <rect x="236" y="1190" width="980" height="140" rx="14" fill="#FAFAFA" stroke="#D1D5DB" stroke-width="2"/>
+  <path d="M270 1240 H380" class="flecha" marker-end="url(#flecha)"/>
+  <text x="404" y="1250" class="rotulo">Navegación directa</text>
+  <path d="M270 1290 H380" class="flechaPun" marker-end="url(#flechaGris)"/>
+  <text x="404" y="1300" class="rotulo">Acceso condicionado por el rol</text>
+
+  <text x="1260" y="1265" class="rotulo">«Volver» regresa a Daños reportados.</text>
+
+  <!-- ================= PROTOTIPOS ================= -->
+  <line x1="236" y1="1390" x2="2314" y2="1390" stroke="#D1D5DB" stroke-width="2"/>
+  <text x="236" y="1445" class="seccion">Prototipos de las interfaces</text>
+  <text x="236" y="1487" class="sub">Diseño del Sprint 2: se conservan tal como están en docs/diseno, sin modificaciones.</text>
+
+  <image x="236" y="1520" width="470" height="1017" href="__IMG5__" preserveAspectRatio="xMidYMid meet"/>
+  <rect x="236" y="1520" width="470" height="1017" fill="none" stroke="#D1D5DB" stroke-width="2"/>
+  <text x="471" y="2587" class="rotulo" text-anchor="middle">a) Inicio administrativo (5.png)</text>
+
+  <image x="772" y="1520" width="470" height="1017" href="__IMG12__" preserveAspectRatio="xMidYMid meet"/>
+  <rect x="772" y="1520" width="470" height="1017" fill="none" stroke="#D1D5DB" stroke-width="2"/>
+  <text x="1007" y="2587" class="rotulo" text-anchor="middle">b) Daños reportados (12.png)</text>
+
+  <!-- Espacio reservado: Gestionar Reporte -->
+  <rect x="1308" y="1520" width="470" height="1017" rx="18" fill="#FAFAFA" stroke="#6B7280" stroke-width="3" stroke-dasharray="12 9"/>
+  <text x="1543" y="1950" font-size="40" font-weight="800" fill="#6B7280" text-anchor="middle">CAPTURA PENDIENTE</text>
+  <text x="1543" y="2020" class="rotulo" text-anchor="middle">Pantalla</text>
+  <text x="1543" y="2062" class="rotulo" text-anchor="middle">«Gestionar Reporte»</text>
+  <text x="1543" y="2140" class="rotulo" text-anchor="middle">Se reemplazará por la</text>
+  <text x="1543" y="2180" class="rotulo" text-anchor="middle">captura real de la app</text>
+  <text x="1543" y="2587" class="rotulo" text-anchor="middle">c) Gestionar reporte (pendiente)</text>
+
+  <image x="1844" y="1520" width="470" height="1017" href="__IMG13__" preserveAspectRatio="xMidYMid meet"/>
+  <rect x="1844" y="1520" width="470" height="1017" fill="none" stroke="#D1D5DB" stroke-width="2"/>
+  <text x="2079" y="2587" class="rotulo" text-anchor="middle">d) Notificaciones (13.png)</text>
+
+  <!-- ================= NOTA ================= -->
+  <rect x="236" y="2660" width="2078" height="200" rx="14" fill="#FAFAFA" stroke="#D1D5DB" stroke-width="2"/>
+  <text x="276" y="2716" font-size="38" font-weight="700" fill="#111111">Captura pendiente: Gestionar Reporte</text>
+  <text x="276" y="2764" class="rotulo">La pantalla no cuenta con prototipo en docs/diseno. El espacio reservado se reemplazará por la</text>
+  <text x="276" y="2808" class="rotulo">captura real de la app terminada, sin modificar el resto de la figura.</text>
+
+  <text x="236" y="3160" class="sub">Figura 3b · Flujo del Rol Admin — REPCAMPUSOFT · Sprint 2</text>
+</svg>
